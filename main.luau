@@ -1,0 +1,1098 @@
+local Inputs = require("inputs")
+local Util = require("util")
+local Emotes = require("emotes")
+local Models = require("models")
+local Axis = require("axis")
+
+local moveSpeed = config.moveSpeed or 1600
+local mouseSensitivity = config.mouseSensitivity or 3.6
+local gravityChaser = gravity.upRotation
+local tabTitleMode = config.tabTitleMode or "icon+name"
+local showModelsTab = config.showModelsTab ~= nil and config.showModelsTab or true
+config.showAxisDebug = config.showAxisDebug or false
+Inputs.enableSpaceKeybind = config.enableSpaceKeybind or false
+local mutedPlayers = {}
+
+local screenshotWidth = config.screenshotWidth or 1920
+local screenshotHeight = config.screenshotHeight or 1080
+local useF9Screenshot = config.useF9Screenshot or true 
+local screenshotSuccessTimer = 0
+
+local emoteLabels = {
+	[0] = { "None" },
+	[1] = { "+" },
+	[2] = { "-" },
+	[3] = { "->", "-->" },
+	[4] = { "<-", "<--" },
+	[5] = { "^", "^^" },
+	[6] = { "v", "vv" },
+	[7] = { "o_o", "o_o.", "o_o;" },
+	[8] = { "x_x", "x_X" },
+	[9] = { "^-^", "^_-", "-_-" },
+	[10] = { "<_<", ">_>" }
+}
+
+local currentEmoteTimer = 0
+local currentEmoteFrame = 1
+
+camera.fieldOfView = 90
+
+local function triggerScreenshot()
+	Screenshot.takeScreenshot(screenshotWidth, screenshotHeight)
+	screenshotSuccessTimer = 3.0
+end
+
+type CameraTransform = {
+	position: Vec3,
+	rotation: Quat,
+	fieldOfView: number,
+}
+local startLocations: { [string]: { [string]: CameraTransform } } = {
+    Orion = {
+        ["Driftball District"] = { position = Vec3.new(0, -3000, -27000), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
+        ["4v4 West"] = { position = Vec3.new(-14160.8, 27898.6, -23246.5), rotation = Quat.fromEuler(28.5, -4.9, -89.6), fieldOfView = 90.0 },
+        ["4v4 East"] = { position = Vec3.new(13688.8, 28096.6, -23525.5), rotation = Quat.fromEuler(-30.1, -4.9, -89.6), fieldOfView = 90.0 },
+        ["Driftball Fieldhouse"] = { position = Vec3.new(46.5, 22785.3, -29127.5), rotation = Quat.fromEuler(0.0, -5.6, 91.1), fieldOfView = 90.0 },
+        ["Club District"] = { position = Vec3.new(24000, 1000, 14000), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
+        ["Parkour District"] = { position = Vec3.new(-24150, 1457, 14100), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
+        ["Scraprun"] = { position = Vec3.new(-16857.9, 7397.9, 29016.7), rotation = Quat.fromEuler(-150.0, 1.4, 91.2), fieldOfView = 90.0 },
+        ["DRAFT District"] = { position = Vec3.new(186.2, 1769.9, 28125.7), rotation = Quat.fromEuler(-179.3, 1.4, 91.2), fieldOfView = 90.0 },
+        ["The Spine"] = { position = Vec3.new(-0.0, -0.0, 0.0), rotation = Quat.fromEuler(0.0, -0.0, 0.0), fieldOfView = 90.0 },
+        ["Driftblitz"] = { position = Vec3.new(27009.3, 5353.3, -211.0), rotation = Quat.fromEuler(90.0, -0.4, 85.5), fieldOfView = 90.0 },
+        ["Baseball"] = { position = Vec3.new(13899.7, 1254.5, 24347.8), rotation = Quat.fromEuler(149.9, -0.4, 85.5), fieldOfView = 90.0 },
+        ["Club Fieldhouse"] = { position = Vec3.new(23232.2, 28749.7, 16914.5), rotation = Quat.fromEuler(-179.5, -53.9, -0.5), fieldOfView = 90.0 },
+		["Space"] = { position = Vec3.new(-373165.7, -3660.2, -314114.9), rotation = Quat.fromEuler(-0.0, -0.0, 0.0), fieldOfView = 90.0 },
+	},
+    Ares = {
+        ["Ares Plaza"] = { position = Vec3.new(2215.4, -5997.9, 132.4), rotation = Quat.fromEuler(0, 0, -180), fieldOfView = 90 },
+		["Alpha 03"] = { position = Vec3.new(-14.8, -17975.0, -8070.0), rotation = Quat.fromEuler(0, 0, -1), fieldOfView = 90 },
+		["Alpha 02"] = { position = Vec3.new(-17.2, -5940.6, -7962.8), rotation = Quat.fromEuler(0, 0, -1), fieldOfView = 90 },
+		["Alpha 01"] = { position = Vec3.new(-19.6, 5977.0, -8087.2), rotation = Quat.fromEuler(0, 0, -1), fieldOfView = 90 },
+		["Beta 03"] = { position = Vec3.new(6993.7, -18012.6, 4014.6), rotation = Quat.fromEuler(1, -1, -0), fieldOfView = 90 },
+		["Beta 02"] = { position = Vec3.new(7000.7, -5987.9, 4049.0), rotation = Quat.fromEuler(1, -1, -0), fieldOfView = 90 },
+		["Beta 01"]= { position = Vec3.new(6964.6, 6062.1, 4028.4), rotation = Quat.fromEuler(1, -1, -0), fieldOfView = 90 },
+		["Gamma 03"]= {position = Vec3.new(-6992.7, -17947.0, 4031.9), rotation = Quat.fromEuler(-1, 1, -0), fieldOfView = 90 },
+		["Gamma 02"]= { position = Vec3.new(-7001.6, -5993.0, 4024.1), rotation = Quat.fromEuler(-1, 1, -0), fieldOfView = 90 },
+		["Gamma 01"]= {position = Vec3.new(-6985.0, 5999.7, 4031.8), rotation = Quat.fromEuler(-1, 1, -0), fieldOfView = 90 },	
+		["Space"] = { position = Vec3.new(150800.7, 94700.2, -62450.9), rotation = Quat.fromEuler(-0.0, -0.0, 0.0), fieldOfView = 90.0 },
+	},
+    Shuttle = {
+        ["Shuttle"] = { position = Vec3.new(1325, 15, 84), rotation = Quat.fromEuler(0, -5, -53), fieldOfView = 90 },
+    },
+}
+local orionLocationGroups = {
+    {
+        title = "Driftball District",
+        labels = { "Driftball District", "Fieldhouse", "4v4 West", "4v4 East" },
+    },
+    {
+        title = "Club District",
+        labels = { "Club District", "Driftblitz", "Baseball", "Fieldhouse (Club)" },
+    },
+    {
+        title = "Parkour District",
+        labels = { "Parkour District", "Scraprun", "DRAFT District" },
+    },
+    {
+        title = "Orion",
+        labels = { "The Spine", "Space" },
+    },
+}
+
+local aresLocationGroups = {
+    {
+        title = "Ares",
+        labels = { "Ares Plaza", "Space" },
+    },
+    {
+        title = "Alpha",
+        labels = { "Alpha 01", "Alpha 02", "Alpha 03" },
+    },
+    {
+        title = "Beta",
+        labels = { "Beta 01", "Beta 02", "Beta 03" },
+    },
+	{
+        title = "Gamma",
+        labels = { "Gamma 01", "Gamma 02", "Gamma 03" },
+    },
+}
+
+local defaultSpawnRealm = config.defaultSpawnRealm or "Orion"
+local defaultSpawnName = config.defaultSpawnName or "Driftball District"
+local startLocation = startLocations[defaultSpawnRealm] and startLocations[defaultSpawnRealm][defaultSpawnName]
+if not startLocation then
+    startLocation = startLocations.Orion["Driftball District"]
+end
+
+local pendingGravitySnap = false
+
+local playerSearchText = ""
+local selectedPlayerId = nil
+local followSpectatorEnabled = false
+local selectedSpectatorName = ""
+local spectatorSearchText = ""
+local spectatorList = {}
+
+local emoteCycling = false
+local lastEmoteCycleTime = 0
+local emoteCycleInterval = 1.0
+local timer = 0
+
+local flipActive = false
+local flipDirection = 1
+local flipTimer = 0
+local flipDuration = 0.5
+
+local ntimer = 0
+local ndelay = 0.01
+
+local function snapToGravity()
+	gravityChaser = gravity.upRotation
+	Inputs.rotEuler.x = 0
+end
+
+local function goToLocation(transform: CameraTransform)
+	Inputs.rotEuler = transform.rotation:euler()
+	Inputs.rotEuler.x = 0
+	camera.position = transform.position
+	camera.rotation = transform.rotation
+	camera.fieldOfView = transform.fieldOfView
+	snapToGravity()
+	pendingGravitySnap = true
+	ntimer = 0
+end
+
+local function getTabTitle(icon: string, name: string)
+	if tabTitleMode == "name" then
+		return name
+	elseif tabTitleMode == "icon" then
+		return icon
+	end
+	return icon .. "  " .. name
+end
+
+function onTransitionBegin(transitionInfo: Transition)
+	if Inputs.firstTransition then
+		transitionInfo.length = 10
+		goToLocation(startLocation)
+	else
+		goToLocation({
+			position = transitionInfo.startPosition,
+			rotation = transitionInfo.startRotation,
+			fieldOfView = transitionInfo.startFieldOfView,
+		})
+	end
+	Inputs.firstTransition = false
+	Util.setSmoothing(Inputs.smoothing, Inputs)
+	Models.onTransitionBegin()
+end
+
+local serverName = "Offline"
+
+do
+	local ok, result = pcall(Network.getCurrentServer)
+	if ok and type(result) == "string" and result ~= "" and result:lower() ~= "unknown" then
+		serverName = result
+	end
+end
+
+function onGui()
+	Gui.text("procam")
+
+	Gui.sameLine()
+
+	Gui.textDisabled(serverName)
+
+	Gui.sameLine()
+
+	local activeCam = "freecam"
+	if Axis.isEnabled then
+		activeCam = "Handcam"
+	end
+
+	Gui.textDisabled("Using " .. activeCam)
+
+	Gui.beginTabBar("FreecamTabs")
+
+	if Gui.beginTabItem(getTabTitle(Icon.Home, "Home")) then
+		if Gui.collapsingHeader("Emotes") then	
+			Emotes.onGui()
+
+			local currentEmoteId = camera:getEmote() or 0
+
+			Gui.beginChild("homeCurrentEmote", 180, 70, true)
+			Gui.text("Current Emote")
+
+			local labels = emoteLabels[currentEmoteId] or { "None" }
+			Gui.text(labels[currentEmoteFrame] or labels[1])
+
+			Gui.endChild()
+			Gui.sameLine()
+
+			Gui.beginChild("homeEmoteCycling", 180, 70, true)
+			Gui.text("Emote Cycling")
+			if emoteCycling then
+				local remaining = math.max(0, emoteCycleInterval - (timer - lastEmoteCycleTime))
+				Gui.text(Icon.Sync .. "  " .. string.format("%.1f", remaining))
+			else
+				Gui.text("Disabled")
+			end
+			Gui.endChild()
+			Gui.newLine()
+
+			emoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
+			Gui.setItemTooltip("Enable cycling through emotes")
+
+			if emoteCycling then
+				Gui.sameLine()
+                emoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
+            end
+		end
+
+		Gui.separatorText("Quick Settings")
+
+		camera.showNameTags = Gui.checkbox("Show name tags", camera.showNameTags)
+		Inputs.alignToGravity = Gui.checkbox("Automatically Align to Gravity", Inputs.alignToGravity)
+		Inputs.localMovementAxesDefault = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
+		Gui.setItemTooltip("Use Alt to switch between gravity and local movement axes")
+
+		Gui.separatorText("Movement")
+
+		moveSpeed = Gui.sliderFloat("Move Speed", moveSpeed, Inputs.minMoveSpeed, Inputs.maxMoveSpeed)
+		mouseSensitivity = Gui.sliderFloat("Mouse Sensitivity", mouseSensitivity, 0, 10)
+		Inputs.speedAdjustmentRate = Gui.sliderFloat("Speed Acceleration", Inputs.speedAdjustmentRate, 0, 5)
+		Gui.setItemTooltip("How fast the speed adjustment buttons affect the camera speed")
+		
+		Gui.separatorText("Camera Controls")
+
+		camera.position = Gui.dragFloat3("Position", camera.position, 10, -100000, 100000)
+		local newRot = Gui.dragFloat3("Rotation", Inputs.rotEuler, 1, -180, 180)
+		Gui.sameLine()
+			Gui.textDisabled("roll, pitch, yaw")
+		if Gui.isItemActive() then
+			gravityChaser = gravity.upRotation
+			Inputs.rotEuler = newRot
+			camera.rotation = Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y, Inputs.rotEuler.z)
+		end
+		camera.fieldOfView = Gui.sliderFloat("Field of View", camera.fieldOfView, Inputs.minFov, Inputs.maxFov)
+
+		Gui.newLine()
+
+				if Gui.collapsingHeader("Screenshots") then
+			local presetMap = {
+				["1K"] = {
+					["16:9"] = { 1920, 1080 },
+					["9:16"] = { 1080, 1920 },
+					["4:3"] = { 1440, 1080 },
+					["Ultrawide"] = { 2560, 1080 },
+				},
+				["2K"] = {
+					["16:9"] = { 2560, 1440 },
+					["9:16"] = { 1440, 2560 },
+					["4:3"] = { 1920, 1440 },
+					["Ultrawide"] = { 3440, 1440 },
+				},
+				["4K"] = {
+					["16:9"] = { 3840, 2160 },
+					["9:16"] = { 2160, 3840 },
+					["4:3"] = { 2880, 2160 },
+					["Ultrawide"] = { 5120, 2160 },
+				},
+			}
+
+			local activeQuality, activeAspect
+			for qKey, qAspects in pairs(presetMap) do
+				for aKey, res in pairs(qAspects) do
+					if screenshotWidth == res[1] and screenshotHeight == res[2] then
+						activeQuality = qKey
+						activeAspect = aKey
+						break
+					end
+				end
+			end
+
+			local targetQuality = activeQuality or "4K"
+			local targetAspect = activeAspect or "16:9"
+
+			local function drawOption(label, isActive, onClick)
+				if isActive then
+					Gui.beginDisabled()
+					Gui.button(label)
+					Gui.endDisabled()
+				else
+					if Gui.buttonColored(LinearColor.new(0, 0, 0, 0), label) then
+						onClick()
+					end
+				end
+			end
+
+			local qualityList = { "1K", "2K", "4K" }
+			for i, q in ipairs(qualityList) do
+				if i > 1 then Gui.sameLine() end
+				drawOption(q, activeQuality == q, function()
+					local res = presetMap[q][targetAspect]
+					screenshotWidth, screenshotHeight = res[1], res[2]
+					config.screenshotWidth, config.screenshotHeight = screenshotWidth, screenshotHeight
+					if saveConfig then saveConfig() end
+				end)
+			end
+
+			Gui.sameLine()
+			Gui.textDisabled("|")
+			Gui.sameLine()
+
+			local aspectList = { "16:9", "9:16", "4:3", "Ultrawide" }
+			for i, a in ipairs(aspectList) do
+				if i > 1 then Gui.sameLine() end
+				drawOption(a, activeAspect == a, function()
+					local res = presetMap[targetQuality][a]
+					screenshotWidth, screenshotHeight = res[1], res[2]
+					config.screenshotWidth, config.screenshotHeight = screenshotWidth, screenshotHeight
+					if saveConfig then saveConfig() end
+				end)
+			end
+
+			local currentRes = Vec2.new(screenshotWidth, screenshotHeight)
+			local newRes = Gui.dragFloat2("Resolution", currentRes, 10, 100, 7680)
+			Gui.sameLine()
+			Gui.textDisabled("in pixels")
+			local newWidth = math.floor(newRes.x + 0.5)
+			local newHeight = math.clamp(math.floor(newRes.y + 0.5), 100, 4320)
+
+			if newWidth ~= screenshotWidth or newHeight ~= screenshotHeight then
+				screenshotWidth = newWidth
+				screenshotHeight = newHeight
+				config.screenshotWidth = screenshotWidth
+				config.screenshotHeight = screenshotHeight
+				if saveConfig then saveConfig() end
+			end
+
+			Gui.separator()
+
+			local newF9Setting = Gui.checkbox("Enable F9 Screenshot Hotkey", useF9Screenshot)
+			if newF9Setting ~= useF9Screenshot then
+				useF9Screenshot = newF9Setting
+				config.useF9Screenshot = useF9Screenshot
+				if saveConfig then saveConfig() end
+			end
+
+			if Gui.button(Icon.Camera .. "  Take Screenshot") then
+				triggerScreenshot()
+			end
+
+			if screenshotSuccessTimer > 0 then
+				Gui.sameLine()
+				Gui.text("Screenshot saved successfully!")
+			end
+		end
+
+
+		if Gui.collapsingHeader("Locations") then
+
+		if Gui.beginCombo("##SpawnLocationCombo", defaultSpawnName) then
+	if Gui.collapsingHeader("Orion") then
+	local firstGroup = true
+
+	for _, group in ipairs(orionLocationGroups) do
+		if not firstGroup then
+			Gui.separator()
+		end
+		firstGroup = false
+
+		for _, locName in ipairs(group.labels) do
+			if startLocations.Orion[locName] then
+				if Gui.selectable(locName, defaultSpawnName == locName) then
+					defaultSpawnRealm = "Orion"
+					defaultSpawnName = locName
+					config.defaultSpawnRealm = defaultSpawnRealm
+					config.defaultSpawnName = defaultSpawnName
+					if saveConfig then saveConfig() end
+				end
+			end
+		end
+	end
+end
+
+if Gui.collapsingHeader("Ares") then
+	local firstGroup = true
+
+	for _, group in ipairs(aresLocationGroups) do
+		if not firstGroup then
+			Gui.separator()
+		end
+		firstGroup = false
+
+		for _, locName in ipairs(group.labels) do
+			if startLocations.Ares[locName] then
+				if Gui.selectable(locName, defaultSpawnName == locName) then
+					defaultSpawnRealm = "Ares"
+					defaultSpawnName = locName
+					config.defaultSpawnRealm = defaultSpawnRealm
+					config.defaultSpawnName = defaultSpawnName
+					if saveConfig then saveConfig() end
+				end
+			end
+		end
+	end
+end
+
+	if Gui.collapsingHeader("Shuttle##g") then
+		if startLocations.Shuttle and startLocations.Shuttle["Shuttle"] then
+			if Gui.selectable("Shuttle##tp", defaultSpawnName == "Shuttle") then
+				defaultSpawnRealm = "Shuttle"
+				defaultSpawnName = "Shuttle"
+				config.defaultSpawnRealm = defaultSpawnRealm
+				config.defaultSpawnName = defaultSpawnName
+				if saveConfig then saveConfig() end
+			end
+		end
+	end
+
+	Gui.endCombo()
+end
+
+		Gui.sameLine()
+		Gui.text("Default Spawn")
+
+			Gui.beginHorizontal("location_columns")
+
+			Gui.beginChild("orion_column", 300, 300, true)
+			for _, group in ipairs(orionLocationGroups) do
+				if _ > 1 then
+					Gui.separator()
+				end
+				for _, label in ipairs(group.labels) do
+					local location = startLocations.Orion[label]
+					if location and Gui.selectable(label, false) then
+						goToLocation(location)
+					end
+				end
+			end
+			Gui.endChild()
+
+			Gui.beginChild("ares_column", 300, 300, true)
+			for _, group in ipairs(aresLocationGroups) do
+				if _ > 1 then
+					Gui.separator()
+				end
+				for _, label in ipairs(group.labels) do
+					local location = startLocations.Ares[label]
+					if location and Gui.selectable(label, false) then
+						goToLocation(location)
+					end
+				end
+			end
+			Gui.endChild()
+
+			Gui.endHorizontal()
+
+		end
+
+        Gui.newLine()
+
+		Gui.endTabItem()
+	end
+
+	if Gui.beginTabItem(getTabTitle(Icon.Video or Icon.Camera or "", "Handcam")) then
+		Axis.onGui()
+		Gui.endTabItem()
+	end
+
+	if Gui.beginTabItem(getTabTitle(Icon.Cog, "Settings")) then
+		Gui.separatorText("Controls")
+		if Gui.beginTable("ControlsTable", 3) then
+			Gui.tableSetupColumn("Action", 0, 0.4)
+			Gui.tableSetupColumn("Keyboard & Mouse", 0, 0.3)
+			Gui.tableSetupColumn("Controller", 0, 0.3)
+			Gui.tableHeadersRow()
+
+			local function addRow(action, keyboard, controller)
+				Gui.tableNextRow()
+				Gui.tableNextColumn()
+				Gui.text(action)
+				Gui.tableNextColumn()
+				Gui.textDisabled(keyboard or "")
+				Gui.tableNextColumn()
+				Gui.textDisabled(controller or "")
+			end
+
+			addRow("Move", "WASD", "Left Gamepad Stick")
+			addRow("Fly Up or Down", "Q / E", "Triggers")
+			addRow("Speed Up", "Left Shift", "Right Shoulder")
+			addRow("Slow Down", "Left Control", "Left Shoulder")
+			addRow("Pan", "Mouse", "Gamepad Stick")
+			addRow("Roll", "Hold Right Click", "D-Pad Left and Right")
+			addRow("Reset Roll", "Middle Mouse Click", "")
+			addRow("Align to Gravity", "Spacebar", "")
+			addRow("Frontflip", "Arrow Up", "")
+			addRow("Backflip", "Arrow Down", "")
+			addRow("Toggle Smoothing", "Caps Lock", "")
+			addRow("Zoom", "Scrollwheel", "D-Pad Up and Down")
+
+			Gui.endTable()
+		end
+
+		Gui.newLine()
+
+		Gui.separatorText("Smoothing")
+		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
+		if newSmoothing ~= Inputs.smoothing then
+			Inputs.smoothing = newSmoothing
+			Util.setSmoothing(Inputs.smoothing, Inputs)
+		end
+		
+		if not Inputs.smoothing then
+			Gui.beginDisabled()
+		end
+		
+		Inputs.lookSmoothness = Gui.sliderFloat("Look Smoothness", Inputs.lookSmoothness, 0, 1)
+		
+		if not Inputs.smoothing then
+			Gui.endDisabled()
+		end
+		
+		Gui.newLine()
+
+		Gui.separatorText("Customization")
+
+		local newShowModelsTab = Gui.checkbox("Show Draw tab", showModelsTab)
+		if newShowModelsTab ~= showModelsTab then
+			showModelsTab = newShowModelsTab
+			config.showModelsTab = showModelsTab
+			if saveConfig then saveConfig() end
+		end
+
+		local tabTitleModeLabel = "Icon + name"
+		if tabTitleMode == "name" then
+			tabTitleModeLabel = "Name"
+		elseif tabTitleMode == "icon" then
+			tabTitleModeLabel = "Icon"
+		end
+		
+		if Gui.beginCombo("Tab Item Style", tabTitleModeLabel) then
+			if Gui.selectable("Icon + name", tabTitleMode == "icon+name") then
+				tabTitleMode = "icon+name"
+				config.tabTitleMode = tabTitleMode
+				if saveConfig then saveConfig() end
+			end
+			if Gui.selectable("Name", tabTitleMode == "name") then
+				tabTitleMode = "name"
+				config.tabTitleMode = tabTitleMode
+				if saveConfig then saveConfig() end
+			end
+			if Gui.selectable("Icon", tabTitleMode == "icon") then
+				tabTitleMode = "icon"
+				config.tabTitleMode = tabTitleMode
+				if saveConfig then saveConfig() end
+			end
+			Gui.endCombo()
+		end
+
+		Gui.newLine()
+
+		Gui.separatorText("Debug")
+		camera.hideNearestHead = Gui.checkbox("Hide nearest head", camera.hideNearestHead)
+
+		local newSpaceKeybind = Gui.checkbox("Enable Space Keybind", Inputs.enableSpaceKeybind)
+		if newSpaceKeybind ~= Inputs.enableSpaceKeybind then
+			Inputs.enableSpaceKeybind = newSpaceKeybind
+			config.enableSpaceKeybind = newSpaceKeybind
+			if saveConfig then saveConfig() end
+		end
+
+		Gui.setItemTooltip("Use Page Up to teleport to Space for some privacy")
+
+		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
+		if newShowAxisDebug ~= config.showAxisDebug then
+			config.showAxisDebug = newShowAxisDebug
+			if saveConfig then saveConfig() end
+		end
+
+		local newGoalExplosions = Gui.checkbox("Goal explosions", Inputs.playGoalExplosions)
+		if newGoalExplosions ~= Inputs.playGoalExplosions then
+			Inputs.playGoalExplosions = newGoalExplosions
+			spectatorDebug.goalExplosions = Inputs.playGoalExplosions
+		end
+
+		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
+		if newScraprunSpinners ~= Inputs.playScraprunSpinners then
+			Inputs.playScraprunSpinners = newScraprunSpinners
+			spectatorDebug.scrapRunSpinners = Inputs.playScraprunSpinners
+		end
+
+		local newPlaceBallEnabled = Gui.checkbox("'Place Ball' visuals", Inputs.placeBallEnabled)
+		if newPlaceBallEnabled ~= Inputs.placeBallEnabled then
+			Inputs.placeBallEnabled = newPlaceBallEnabled
+			spectatorDebug.placeBallHereVisuals = Inputs.placeBallEnabled
+		end
+
+		local newBallScaleMultiplier = Gui.sliderFloat("Ball scale multiplier", Inputs.ballScaleMultiplier, 0, 10)
+		if newBallScaleMultiplier ~= Inputs.ballScaleMultiplier then
+			Inputs.ballScaleMultiplier = newBallScaleMultiplier
+			spectatorDebug.replayBallScaleMultiplier = Inputs.ballScaleMultiplier
+		end
+
+		Gui.endTabItem()
+	end
+
+	if Gui.beginTabItem(getTabTitle(Icon.Users, "Players")) then
+		local players = {}
+        local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
+        
+        for i = 1, #sessions do
+            local session = sessions[i]
+            if session and session.players then
+                for j = 1, #session.players do
+                    local pInfo = session.players[j]
+                    if pInfo and pInfo.playerId then
+                        local p = session.getPlayerById and session:getPlayerById(pInfo.playerId) or pInfo
+                        if p and p.playerName then
+                            table.insert(players, { id = pInfo.playerId, name = p.playerName, object = p })
+                        end
+                    end
+                end
+            end
+        end
+
+        local gameData = getGameData()
+        local spectatorList = (gameData and gameData.spectators) and gameData.spectators or {}
+
+        local selectedPlayerObj = nil
+        if selectedPlayerId then
+            for _, p in ipairs(players) do
+                if p.id == selectedPlayerId then selectedPlayerObj = p.object; break end
+            end
+        end
+
+        local selectedSpectator = nil
+        if selectedSpectatorName ~= "" then
+            for _, spec in ipairs(spectatorList) do
+                local name = spec.playerName or ("Spectator #" .. spec.playerId)
+                if name == selectedSpectatorName then selectedSpectator = spec; break end
+            end
+        end
+
+        Gui.beginChild("playerCountBox", 140, 70, true)
+        Gui.textDisabled(Icon.Users .. "  Players")
+        Gui.text(tostring(#players))
+        Gui.endChild()
+        
+        Gui.sameLine()
+        
+        Gui.beginChild("spectatorCountBox", 140, 70, true)
+        Gui.textDisabled(Icon.Eye .. "  Spectators")
+        Gui.text(tostring(#spectatorList))
+        Gui.endChild()
+
+        Gui.sameLine()
+
+        Gui.beginChild("targetStatusBox", 200, 70, true)
+        Gui.textDisabled(Icon.ChevronRight .. "  Spectator Target")
+        Gui.text(selectedSpectatorName ~= "" and selectedSpectatorName or "None")
+        if followSpectatorEnabled then
+            Gui.sameLine()
+            Gui.textDisabled("(Following)")
+        end
+        Gui.endChild()
+
+        Gui.newLine()
+
+        Gui.separatorText(Icon.Users .. "  Players (" .. tostring(#players) .. ")")
+        Gui.indent()
+        playerSearchText = Gui.inputText(Icon.Search .. "  Search Players", playerSearchText)
+        
+        if Gui.beginListBox("##PlayersList") then
+			for i, p in ipairs(players) do
+				if playerSearchText == "" or string.find(string.lower(p.name), string.lower(playerSearchText), 1, true) then
+					local uniqueLabel = p.name .. "##" .. tostring(i)
+					
+					if Gui.selectable(uniqueLabel, selectedPlayerId == p.id) then
+						selectedPlayerId = p.id
+					end
+				end
+			end
+			Gui.endListBox()
+		end
+
+
+        if selectedPlayerObj then
+            if Gui.button(Icon.LocationArrow .. "  Teleport to " .. (selectedPlayerObj.playerName or "")) then
+                local targetPos = (selectedPlayerObj.head and selectedPlayerObj.head.position)
+                    or (selectedPlayerObj.root and selectedPlayerObj.root.position)
+                    or (selectedPlayerObj.transform and selectedPlayerObj.transform.position)
+                if targetPos then camera.position = targetPos end
+            end
+
+            if readLocation == 0 then
+                Gui.sameLine()
+
+                local targetName = selectedPlayerObj.playerName or ""
+                local isMuted = mutedPlayers[targetName] or false
+                local muteIcon = isMuted and (Icon.VolumeUp or "") or (Icon.VolumeMute or "")
+                local buttonText = isMuted and (muteIcon .. "  Unmute") or (muteIcon .. "  Mute")
+
+                if Gui.button(buttonText .. "##Mute_" .. targetName) then
+                    local newState = not isMuted
+                    local success = Settings.mutePlayerByName(targetName, newState)
+                    if success then
+                        mutedPlayers[targetName] = newState
+                    end
+                end
+            else
+				Gui.sameLine()
+				Gui.beginDisabled()
+				Gui.button(Icon.VolumeMute .. "  Mute")
+				Gui.setItemTooltip("You can't mute players from replays!")
+				Gui.endDisabled()
+			end
+
+			Gui.sameLine()
+
+			if Gui.button(Icon.ChevronRight .. "  Start Handcam following") then
+				config.currentPlayerId = selectedPlayerId
+				if saveConfig then saveConfig() end
+				
+				if not Axis.isEnabled then
+					Axis.isEnabled = true
+				end
+				Axis.onLoad()
+			end
+		else
+			Gui.textDisabled("Select a player above to interact.")
+		end
+		Gui.unindent()
+		Gui.newLine()
+
+		Gui.separatorText(Icon.Eye .. "  Spectators (" .. tostring(#spectatorList) .. ")")
+		Gui.indent()
+		spectatorSearchText = Gui.inputText(Icon.Search .. "  Search Spectators", spectatorSearchText)
+		
+		if Gui.beginListBox("##SpectatorsList") then
+			for _, spec in ipairs(spectatorList) do
+				local name = spec.playerName or ("Spectator #" .. spec.playerId)
+				if spectatorSearchText == "" or string.find(string.lower(name), string.lower(spectatorSearchText), 1, true) then
+					if Gui.selectable(name, selectedSpectatorName == name) then
+						selectedSpectatorName = name
+					end
+				end
+			end
+			Gui.endListBox()
+		end
+
+		if selectedSpectator then
+			Gui.beginHorizontal("SpecActions")
+				if Gui.button(Icon.LocationArrow .. "  Teleport") then
+					local targetPos = (selectedSpectator.transform and selectedSpectator.transform.position)
+						or (selectedSpectator.root and selectedSpectator.root.position)
+					if targetPos then camera.position = targetPos end
+				end
+				
+				local followText = followSpectatorEnabled and (Icon.Pause .. " Stop Following") or (Icon.Play .. "  Start Following")
+				if Gui.button(followText) then
+					followSpectatorEnabled = not followSpectatorEnabled
+				end
+			Gui.endHorizontal()
+		else
+			Gui.textDisabled("Select a spectator above to interact.")
+		end
+		Gui.unindent()
+		Gui.newLine()
+
+    	Gui.endTabItem()
+	end
+
+	if showModelsTab and Gui.beginTabItem(getTabTitle(Icon.VectorSquare, "Draw")) then
+		Gui.beginTabBar("DrawSubTabs")
+		
+		if Gui.beginTabItem(Icon.Shapes .. "  Models") then
+			Models.onModelsGui()
+			Gui.endTabItem()
+		end
+		
+		if Gui.beginTabItem(Icon.Image .. "  Images & GIFs") then
+			Models.onImagesGui()
+			Gui.endTabItem()
+		end
+		
+		if Gui.beginTabItem(Icon.Font .. "  Text") then
+			Models.onTextGui()
+			Gui.endTabItem()
+		end
+		
+		Gui.endTabBar()
+		Gui.endTabItem()
+	end
+
+	Gui.endTabBar()
+end
+
+function tick(dt)
+	if pendingGravitySnap then
+		ntimer += dt
+		snapToGravity()
+		if ntimer >= ndelay then
+			snapToGravity()
+			pendingGravitySnap = false
+			ntimer = 0
+		end
+	end
+
+	camera.hideNearestHead = false
+	Models.tick(dt)
+	timer = timer + dt
+
+	if screenshotSuccessTimer > 0 then
+		screenshotSuccessTimer = math.max(0, screenshotSuccessTimer - dt)
+	end
+
+	if useF9Screenshot and Input.getKeyDown(Input.Key.F9) then
+		triggerScreenshot()
+	end
+
+	currentEmoteTimer += dt
+
+	if currentEmoteTimer >= 0.5 then
+		currentEmoteTimer -= 0.5
+
+		local currentEmoteId = camera:getEmote() or 0
+		local labels = emoteLabels[currentEmoteId] or { "None" }
+
+		currentEmoteFrame += 1
+
+		if currentEmoteFrame > #labels then
+			currentEmoteFrame = 1
+		end
+	end
+
+	if emoteCycling and timer - lastEmoteCycleTime > emoteCycleInterval then
+        local currentId = camera:getEmote() or 0
+        local nextId = (currentId + 1) % 11
+        camera:setEmote(nextId)
+        lastEmoteCycleTime = timer
+    end
+
+	if Axis.isEnabled then
+		Axis.tick(dt)
+		return
+	end
+
+	local forward = camera.rotation:getForwardVector()
+	local currentGravityDirection = gravityChaser:getUpVector()
+	local gravityForward = Util.projectVectorOntoPlane(forward, currentGravityDirection):getSafeNormal()
+	local right = camera.rotation:getRightVector()
+	local up = camera.rotation:getUpVector()
+	local useLocalMovementAxes = Util.xor(Inputs.localMovementAxesDefault, Input.getKey(Inputs.gravityAlignedMovementModifier))
+
+	if Input.getKey(Inputs.fastKey) or Input.getKey(Input.Gamepad.RightShoulder) then
+		moveSpeed *= (1 + Inputs.speedAdjustmentRate * dt)
+		if moveSpeed < Inputs.minMoveSpeed then
+			moveSpeed = Inputs.minMoveSpeed
+		end
+		if moveSpeed > Inputs.maxMoveSpeed then
+			moveSpeed = Inputs.maxMoveSpeed
+		end
+	elseif Input.getKey(Inputs.slowKey) or Input.getKey(Input.Gamepad.LeftShoulder) then
+		moveSpeed *= (1 - Inputs.speedAdjustmentRate * dt)
+		if moveSpeed > Inputs.maxMoveSpeed then
+			moveSpeed = Inputs.maxMoveSpeed
+		end
+	end
+
+	if Input.getKeyDown(Inputs.toggleSmoothingKey) then
+		Inputs.smoothing = not Inputs.smoothing
+		Util.setSmoothing(Inputs.smoothing, Inputs)
+	end
+
+	if Inputs.enableSpaceKeybind and Input.getKeyDown(Inputs.spaceLocationKey) then
+		if startLocations.Orion and startLocations.Orion["Space"] then
+			goToLocation(startLocations.Orion["Space"])
+		end
+	end
+
+	if Input.getKeyDown(Input.Key.L) then
+		local currentEmote = camera:getEmote()
+		camera:setEmote(currentEmote == 9 and 0 or 9)
+	end
+
+	if Input.getKeyDown(Input.Key.Up) and not flipActive then
+        flipActive = true
+        flipDirection = 1
+        flipTimer = 0
+    elseif Input.getKeyDown(Input.Key.Down) and not flipActive then
+        flipActive = true
+        flipDirection = -1
+        flipTimer = 0
+    end
+
+    local currentFlipOffset = 0
+    if flipActive then
+        flipTimer = flipTimer + dt
+        local progress = flipTimer / flipDuration
+        if progress >= 1 then
+            progress = 1
+            flipActive = false
+        end
+        currentFlipOffset = progress * 360 * flipDirection
+    end
+
+	camera.fieldOfView -= Input.getAnalog(Input.Key.MouseWheelAxis) * Inputs.zoomSpeedKb
+	if Input.getKey(Inputs.zoomInGp) then
+		camera.fieldOfView -= Inputs.zoomSpeedGp
+	elseif Input.getKey(Inputs.zoomOutGp) then
+		camera.fieldOfView += Inputs.zoomSpeedGp
+	end
+
+	camera.fieldOfView = math.clamp(camera.fieldOfView, Inputs.minFov, Inputs.maxFov)
+
+	local input = Vec3.zeroVector
+	if Input.getKey(Inputs.forwardKey) then
+		if useLocalMovementAxes then
+			input += forward
+		else
+			input += gravityForward
+		end
+	end
+	if Input.getKey(Inputs.backwardKey) then
+		if useLocalMovementAxes then
+			input -= forward
+		else
+			input -= gravityForward
+		end
+	end
+	if Input.getKey(Inputs.rightKey) then
+		input += right
+	end
+	if Input.getKey(Inputs.leftKey) then
+		input -= right
+	end
+	if Input.getKey(Inputs.upKey) then
+		if useLocalMovementAxes then
+			input += up
+		else
+			input += currentGravityDirection
+		end
+	end
+	if Input.getKey(Inputs.downKey) then
+		if useLocalMovementAxes then
+			input -= up
+		else
+			input -= currentGravityDirection
+		end
+	end
+
+	input += right * Input.getAnalog(Input.Gamepad.LeftX)
+	input += forward * Input.getAnalog(Input.Gamepad.LeftY)
+	input += up * Input.getAnalog(Input.Gamepad.RightTriggerAxis)
+	input -= up * Input.getAnalog(Input.Gamepad.LeftTriggerAxis)
+
+	if Input.getKeyDown(Input.Key.MiddleMouseButton) then
+		Inputs.rotEuler.x = 0
+		Inputs.lookInputTarget.x = 0
+	end
+
+	local adjustedRotSpeed = Inputs.fovRotSpeedMultiplier * (camera.fieldOfView - 90) / 90 + Inputs.rotSpeed
+	local adjustedMouseSensitivity = Inputs.fovRotSpeedMultiplier * (camera.fieldOfView - 90) / 90 + mouseSensitivity
+	local adjustedLookSmoothness = 1 - (1 - Inputs.lookSmoothness) ^ 3
+	local lookInputTargetDelta = Vec3.zeroVector
+
+	local mouse = Input.getMouseDelta()
+	local rollAngle = -Inputs.rotEuler.x * math.pi / 180.0
+	if mouse and mouse.x then
+		if Input.getKey(Inputs.rollMouseEnable) then
+			lookInputTargetDelta.x += mouse.x * mouseSensitivity / 2.0
+		else
+			lookInputTargetDelta.z += mouse.x * adjustedMouseSensitivity
+			lookInputTargetDelta.y += mouse.y * adjustedMouseSensitivity
+		end
+	end
+
+	if Input.getKey(Inputs.rollRightGp) then
+		lookInputTargetDelta.x += Inputs.rotSpeed * dt / 2
+	elseif Input.getKey(Inputs.rollLeftGp) then
+		lookInputTargetDelta.x -= Inputs.rotSpeed * dt / 2
+	end
+	lookInputTargetDelta.z += Input.getAnalog(Input.Gamepad.RightX) * adjustedRotSpeed * dt
+	lookInputTargetDelta.y += Input.getAnalog(Input.Gamepad.RightY) * adjustedRotSpeed * dt
+
+	local rollAdjustedInput = Vec3.new(
+		lookInputTargetDelta.x,
+		lookInputTargetDelta.y * math.cos(rollAngle) + lookInputTargetDelta.z * math.sin(rollAngle),
+		lookInputTargetDelta.z * math.cos(rollAngle) - lookInputTargetDelta.y * math.sin(rollAngle)
+	)
+	Inputs.lookInputTarget += rollAdjustedInput
+	local nextLookDiff = Inputs.lookInputTarget * math.min((1 - adjustedLookSmoothness) * dt * 60, 1)
+
+	if Inputs.alignToGravity then
+		if gravityChaser ~= gravity.upRotation and gravity.strength ~= 0 then
+			local inputTotal = nextLookDiff:length()
+			local nextGravityChaser = Quat.slerp(gravityChaser, gravity.upRotation, (inputTotal * Inputs.gravityChaseSpeed + Inputs.gravitySlowChaseSpeed) * dt)
+			local nextRotation = nextGravityChaser:inverse() * Quat.fromXZ(forward, nextGravityChaser:rotateVector(Vec3.new(0, 0, 1)))
+			Inputs.rotEuler = nextRotation:euler() + Vec3.new(Inputs.rotEuler.x, 0, 0)
+			gravityChaser = nextGravityChaser
+		end
+	end
+	if Input.getKeyDown(Inputs.snapToGravityKey) then
+		snapToGravity()
+	end
+
+	Inputs.rotEuler += nextLookDiff
+	Inputs.lookInputTarget -= nextLookDiff
+
+	if Inputs.rotEuler.y > 89.9 then
+		Inputs.rotEuler.y = 89.9
+	end
+	if Inputs.rotEuler.y < -89.9 then
+		Inputs.rotEuler.y = -89.9
+	end
+
+	if Input.getKeyUp(Inputs.rollMouseEnable) or Input.getKeyUp(Inputs.rollRightGp) or Input.getKeyUp(Inputs.rollLeftGp) then
+		local clampedRoll = math.abs(Inputs.rotEuler.x) % 360
+		if clampedRoll <= Inputs.rollResetTolerance then
+			Inputs.rotEuler.x = 0
+			Inputs.lookInputTarget.x = 0
+		end
+	end
+
+	camera.position += input * moveSpeed * dt
+	camera.rotation = gravityChaser * Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y + currentFlipOffset, Inputs.rotEuler.z)
+	local gameData = getGameData()
+	if gameData and gameData.spectators then
+		spectatorList = gameData.spectators
+	else
+		spectatorList = {}
+	end
+
+	local selectedSpectator = nil
+	if selectedSpectatorName ~= "" then
+		for _, spec in ipairs(spectatorList) do
+			local name = spec.playerName or ("Spectator #" .. spec.playerId)
+			if name == selectedSpectatorName then
+				selectedSpectator = spec
+				break
+			end
+		end
+	end
+
+	if followSpectatorEnabled and selectedSpectator then
+		local targetPos = selectedSpectator.transform.position
+		local targetRot = selectedSpectator.transform.rotation
+		camera.position = targetPos
+		camera.rotation = targetRot
+		Inputs.rotEuler = camera.rotation:euler()
+	end
+
+end
+
+function onMessageReceived(message)
+	if message.messageType == "setTransform" then
+		goToLocation({
+			position = message.position,
+			rotation = message.rotation,
+			fieldOfView = message.fieldOfView,
+		})
+	elseif message.messageType == "lookAt" then
+		camera:lookAt(message.target, message.upVector)
+		Inputs.rotEuler = camera.rotation:euler()
+	end
+end
