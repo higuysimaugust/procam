@@ -56,6 +56,3 @@ procam is a fork of another axiom's freecam, which fixes several bugs, improves 
 > This product is not affiliated with Another Axiom Inc. or its videogames Gorilla Tag and Orion Drift and is not endorsed or otherwise sponsored by Another Axiom. Portions of the materials contained herein are property of Another Axiom. ©2021 Another Axiom Inc.
 
 Ping me in the forum thread for questions, feedback, suggestions, and more.
-
-> [!IMPORTANT]
-> This product is not affiliated with Another Axiom Inc. or its videogames Gorilla Tag and Orion Drift and is not endorsed or otherwise sponsored by Another Axiom. Portions of the materials contained herein are property of Another Axiom. ©2021 Another Axiom Inc.
