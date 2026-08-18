@@ -986,12 +986,6 @@ function onModelsGui()
         Gui.textDisabled("no .glb / .gltf files found")
     else
         if Gui.beginListBox("##AvailableModelsList") then
-            if Gui.selectable("Skybox template", false) then
-                status = "Loading..."
-                pendingSpawnModelFile = "assets/skybox.glb"
-                pendingSpawnModelDelay = 0.1
-                pendingSpawnModelScale = 150000
-            end
             for i, file in ipairs(modelFiles) do
                 Gui.pushId("model_" .. tostring(i))
                 local cleanName = file:gsub("^assets/", "")
