@@ -1,11 +1,6 @@
 # august.procam
 procam is a fork of another axiom's freecam, which fixes several bugs, improves on every gui, adds 50+ new features and quality-of-life improvements, and so much more!
 
-**where to download?**
-- the .zip attached
-- on GitHub [here]()
-- *coming to the spectator registry soon!*
-
 **functionality**
 * gui
   - tabs
