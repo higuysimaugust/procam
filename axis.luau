@@ -15,6 +15,7 @@ config.headGrabRadius = config.headGrabRadius or 30
 config.headDropRadius = config.headDropRadius or 22
 config.cameraGrabRadius = config.cameraGrabRadius or 50
 config.ownerRecallTime = 1.5
+if config.requireTwoHandsRecall == nil then config.requireTwoHandsRecall = false end
 config.thirdPersonDistance = config.thirdPersonDistance or 300
 config.grabDelayTime = config.grabDelayTime or 1.0
 
@@ -691,12 +692,31 @@ local function processOwnerRecall(dt)
         ownerRecallTimer = 0
         return false
     end
+
+    local rightHandPos = getHandPosition(owner, false)
+    local leftHandPos = getHandPosition(owner, true)
+    
     local rightHeld = isTriggerPressed(owner, false)
     local leftHeld = isTriggerPressed(owner, true)
-    if not (rightHeld or leftHeld) then
+
+    local rightNearHead = rightHandPos and (Vec3.distance(rightHandPos, owner.head.position) <= config.headGrabRadius)
+    local leftNearHead = leftHandPos and (Vec3.distance(leftHandPos, owner.head.position) <= config.headGrabRadius)
+
+    local validRight = rightHeld and rightNearHead
+    local validLeft = leftHeld and leftNearHead
+
+    local recalling = false
+    if config.requireTwoHandsRecall then
+        recalling = validRight and validLeft
+    else
+        recalling = validRight or validLeft
+    end
+
+    if not recalling then
         ownerRecallTimer = 0
         return false
     end
+
     ownerRecallTimer = ownerRecallTimer + dt
     if ownerRecallTimer >= config.ownerRecallTime then
         activePlayerId = config.ownerId
@@ -1415,6 +1435,12 @@ local function drawSettingsTab()
     end
 
     if Gui.collapsingHeader("Interaction") then
+
+        local newRequireTwoHandsRecall = Gui.checkbox("require 2 hands to recall", config.requireTwoHandsRecall)
+        if newRequireTwoHandsRecall ~= config.requireTwoHandsRecall then
+            config.requireTwoHandsRecall = newRequireTwoHandsRecall
+            changed = true
+        end
 
         local newOwnerRecallTime = Gui.sliderFloat("owner recall time (sec)", config.ownerRecallTime, 0.5, 5.0)
         if newOwnerRecallTime ~= config.ownerRecallTime then
