@@ -606,7 +606,7 @@ local function getPlayersList()
                 if pInfo and pInfo.playerId then
                     local p = session.getPlayerById and session:getPlayerById(pInfo.playerId) or pInfo
                     if p and p.playerName then
-                        table.insert(players, { id = pInfo.playerId, name = "Target " .. tostring(pInfo.playerId) })
+                        table.insert(players, { id = pInfo.playerId, name = p.playerName })
                     end
                 end
             end
@@ -643,9 +643,11 @@ local function renderPlacedItems(placedList: {Placed})
                     entry.targetSearchText = Gui.inputText(Icon.Search .. "  Search Target", entry.targetSearchText or "")
                     
                     local players = getPlayersList()
+                    local searchText = string.lower(entry.targetSearchText or "")
                     if Gui.beginListBox("##TargetList_" .. tostring(i)) then
                         for _, p in ipairs(players) do
-                            if entry.targetSearchText == "" or string.find(string.lower(p.name), string.lower(entry.targetSearchText), 1, true) then
+                            local lowerName = string.lower(p.name)
+                            if searchText == "" or string.find(lowerName, searchText, 1, true) then
                                 local isSelected = (entry.trackedPlayerId == p.id)
                                 if Gui.selectable(p.name, isSelected) then
                                     entry.trackedPlayerId = p.id
@@ -1051,6 +1053,7 @@ function onImagesGui()
     end
 
     Gui.separatorText("Load images & GIFs")
+    Gui.textDisabled("Use august-image.vercel.app for GIF creation")
     if #imageFiles == 0 then
         Gui.textDisabled("no image files found")
     else

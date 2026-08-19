@@ -52,6 +52,7 @@ local timer = 0
 
 local t = 0
 local activePlayerId = nil
+local activePlayerTarget = nil
 local selectedPlayerId = nil
 local searchText = ""
 local debugMode = false
@@ -127,6 +128,8 @@ local function updateNameTagsVisibility()
     end
 end
 
+local selectedPlayerTarget = nil
+
 local function getPlayers()
     local players = {}
     local sessions = getAllGameData()
@@ -136,7 +139,7 @@ local function getPlayers()
                 local playerId = sessions[i].players[j].playerId
                 local player = sessions[i]:getPlayerById(playerId)
                 if player and player.playerName then
-                    table.insert(players, { id = playerId, name = player.playerName })
+                    table.insert(players, { id = playerId, sessionIndex = i, name = player.playerName })
                 end
             end
         end
@@ -144,9 +147,13 @@ local function getPlayers()
     return players
 end
 
-local function getPlayerById(playerId)
+local function getPlayerById(playerId, sessionIndex)
     if not playerId then return nil end
     local sessions = getAllGameData()
+    if sessionIndex and sessions[sessionIndex] and sessions[sessionIndex].getPlayerById then
+        local player = sessions[sessionIndex]:getPlayerById(playerId)
+        if player then return player end
+    end
     for i = 1, #sessions do
         if sessions[i].getPlayerById then
             local player = sessions[i]:getPlayerById(playerId)
@@ -156,13 +163,54 @@ local function getPlayerById(playerId)
     return nil
 end
 
-local function getPlayerName(playerId)
-    if not playerId then return "None" end
-    local player = getPlayerById(playerId)
+local function getPlayerName(target)
+    if not target then return "None" end
+    local player = (type(target) == "table") and getPlayerByTarget(target) or getPlayerById(target)
     if player and player.playerName then
         return player.playerName
     end
     return "Unknown"
+end
+
+local function isSameTarget(a, b)
+    if not a or not b then return false end
+    return a.id == b.id and a.sessionIndex == b.sessionIndex
+end
+
+local function getPlayerByTarget(target)
+    if not target or not target.id then return nil end
+    local sessions = getAllGameData()
+    if target.sessionIndex and sessions[target.sessionIndex] and sessions[target.sessionIndex].getPlayerById then
+        local player = sessions[target.sessionIndex]:getPlayerById(target.id)
+        if player then return player end
+    end
+    for i = 1, #sessions do
+        if sessions[i].getPlayerById then
+            local player = sessions[i]:getPlayerById(target.id)
+            if player then return player end
+        end
+    end
+    return nil
+end
+
+local function getCurrentTarget()
+    if activePlayerTarget and activePlayerTarget.id == activePlayerId then
+        return activePlayerTarget
+    end
+    if activePlayerId then
+        return { id = activePlayerId, sessionIndex = nil }
+    end
+    return nil
+end
+
+local function getOwnerTarget()
+    if config.ownerTarget and config.ownerTarget.id == config.ownerId then
+        return config.ownerTarget
+    end
+    if config.ownerId then
+        return { id = config.ownerId, sessionIndex = nil }
+    end
+    return nil
 end
 
 local function getSpectators()
@@ -221,7 +269,7 @@ local function checkForOwnerPresence()
     ownerIsPresent = false
     ownerPlayer = nil
     if config.ownerId then
-        ownerPlayer = getPlayerById(config.ownerId)
+        ownerPlayer = getPlayerByTarget(getOwnerTarget())
         ownerIsPresent = (ownerPlayer ~= nil)
     end
     return ownerIsPresent
@@ -233,7 +281,7 @@ local function findAnyPlayer()
         if player then return config.currentPlayerId end
     end
     if config.ownerId then
-        local player = getPlayerById(config.ownerId)
+        local player = getPlayerByTarget(getOwnerTarget())
         if player then return config.ownerId end
     end
     local players = getPlayers()
@@ -241,9 +289,9 @@ local function findAnyPlayer()
     return nil
 end
 
-local function tryAutoAssignDefaultOwner(): boolean
+local function tryAutoAssignDefaultOwner()
     if didAutoAssignDefaultOwner then return false end
-    if config.ownerId ~= nil and getPlayerById(config.ownerId) ~= nil then return false end
+    if config.ownerId ~= nil and getPlayerByTarget(getOwnerTarget()) ~= nil then return false end
     if config.currentPlayerId ~= nil and getPlayerById(config.currentPlayerId) ~= nil then return false end
     if selectedPlayerId ~= nil then return false end
 
@@ -363,12 +411,13 @@ end
 
 local function setViewpointMode(player)
     if not player or not player.head then return end
-    local viewOffset = player.head.rotation:rotateVector(config.viewpointOffset)
-    camera.position = player.head.position + viewOffset
-    camera.rotation = player.head.rotation
+    camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
+    camera.nearClippingPlane = config.nearClip
     camera.fieldOfView = config.fov
     camera.hideNearestHead = config.hideHead
-    camera.positionSmoothing = 0
+    camera.position = player.head.position
+    camera.rotation = player.head.rotation
 
     viewpointMode = true
     thirdPersonMode = false
@@ -408,6 +457,8 @@ local function setThirdPersonMode(player)
     end
     camera.rotation = headRot
     camera.hideNearestHead = false
+    camera.positionSmoothing = 0.1
+    camera.rotationSmoothing = 0.1
     updateNameTagsVisibility()
 end
 
@@ -432,6 +483,8 @@ local function setManualOrbitMode(player)
     end
 
     camera.hideNearestHead = false
+    camera.positionSmoothing = 0.1
+    camera.rotationSmoothing = 0.1
     updateNameTagsVisibility()
 end
 
@@ -480,6 +533,7 @@ local function updateManualOrbitMode(player, dt)
     camera.positionSmoothing = 0.1
     camera.rotationSmoothing = 0.1
     camera.position = player.head.position + cameraDirection * config.orbitRadius
+    local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
     camera:lookAt(player.head.position, upVector)
     camera.hideNearestHead = false
 end
@@ -494,8 +548,10 @@ local function updateThirdPersonMode(player, dt)
         targetPos = hit.position + (hit.normal * 10)
     end
     camera.positionSmoothing = 0.1
+    camera.rotationSmoothing = 0.1
     camera.position = targetPos
-    camera:lookAt(headPos, worldUp)
+    local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
+    camera:lookAt(headPos, upVector)
     camera.hideNearestHead = false
     local distToTarget = Vec3.distance(camera.position, headPos)
     camera.fieldOfView = math.max(60, math.min(config.fov, config.fov - ((config.thirdPersonDistance - distToTarget) / 10)))
@@ -540,6 +596,8 @@ local function enterBallModeFromPosition(position)
     handHolding = nil
     freeFloatingMode = false
     camera.hideNearestHead = false
+    camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
     return true
 end
@@ -548,7 +606,7 @@ local function exitBallModeToFirstPerson()
     ballMode = false
     ballIndex = 0
     ballCount = 0
-    local player = getPlayerById(activePlayerId)
+    local player = getPlayerByTarget(getCurrentTarget())
     if player then
         setViewpointMode(player)
     else
@@ -558,6 +616,8 @@ local function exitBallModeToFirstPerson()
         manualOrbitMode = false
         cameraInHand = false
         handHolding = nil
+        camera.positionSmoothing = 0
+        camera.rotationSmoothing = 0
         updateNameTagsVisibility()
     end
 end
@@ -612,6 +672,7 @@ local function updateBallMode()
         camera.rotation = ball.transform.rotation
     end
     camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
     camera.hideNearestHead = false
     updateNameTagsVisibility()
     lastBallPos = ballPos
@@ -622,7 +683,7 @@ local function processOwnerRecall(dt)
         ownerRecallTimer = 0
         return false 
     end
-    local owner = getPlayerById(config.ownerId)
+    local owner = getPlayerByTarget(getOwnerTarget())
     if not owner or not owner.head then
         ownerRecallTimer = 0
         return false 
@@ -701,6 +762,8 @@ local function updateSlingshot(dt)
             camera.rotation = Quat.fromAngleAxis(slingshotAngleX, Vec3.new(1,0,0)) *
                               Quat.fromAngleAxis(slingshotAngleY, Vec3.new(0,1,0)) *
                               Quat.fromAngleAxis(slingshotAngleZ, Vec3.new(0,0,1))
+            camera.positionSmoothing = 0
+            camera.rotationSmoothing = 0
         else
             slingshotReturning = true
             slingshotReturnStartTime = t
@@ -715,6 +778,8 @@ local function updateSlingshot(dt)
             slingshotSpinAngle = slingshotSpinAngle + dt * config.slingshotSpinSpeed * math.pi / 180
             local currentDirection = (slingshotReturnTargetPos - camera.position):normalize()
             camera.rotation = Quat.lookAt(currentDirection, worldUp) * Quat.fromAngleAxis(slingshotSpinAngle, currentDirection)
+            camera.positionSmoothing = 0
+            camera.rotationSmoothing = 0
         else
             setViewpointMode(slingshotPlayer)
             slingshotLaunched = false
@@ -741,6 +806,8 @@ local function beginRightHandGrip(player, handPos, handRot)
         camera:lookAt(lookAwayPoint, worldUp)
     end
     camera.hideNearestHead = false
+    camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
 
     currentExtension = config.minExtension
@@ -778,6 +845,8 @@ local function beginLeftHandGrip(player, handPos, handRot)
         camera:lookAt(lookAwayPoint, worldUp)
     end
     camera.hideNearestHead = false
+    camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
 
     currentExtension = config.minExtension
@@ -854,8 +923,9 @@ local function updateRightHandGrip(player, handPos, handRot, dt)
     end
     
     camera.hideNearestHead = false
-    updateNameTagsVisibility()
     camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
+    updateNameTagsVisibility()
 end
 
 local function updateLeftHandGrip(player, handPos, handRot, dt)
@@ -915,8 +985,9 @@ local function updateLeftHandGrip(player, handPos, handRot, dt)
     end
     
     camera.hideNearestHead = false
-    updateNameTagsVisibility()
     camera.positionSmoothing = 0
+    camera.rotationSmoothing = 0
+    updateNameTagsVisibility()
 end
 
 local function handleCameraRelease(player)
@@ -974,6 +1045,8 @@ local function handleCameraRelease(player)
         ballMode = false
         ballIndex = 0
         ballCount = 0
+        camera.positionSmoothing = 0
+        camera.rotationSmoothing = 0
         updateNameTagsVisibility()
     end
     return newOwnerFound
@@ -982,9 +1055,12 @@ end
 local function drawHomeTab()
     Gui.separatorText(Icon.InfoCircle .. "  State")
 
-    local ownerText = config.ownerId and getPlayerName(config.ownerId) or "none"
+    local ownerPlayerObj = getPlayerByTarget(getOwnerTarget())
+    local ownerText = ownerPlayerObj and ownerPlayerObj.playerName or "none"
     local ownerStatus = config.ownerId and (ownerIsPresent and "[online]" or "[dead]") or ""
-    local followingText = getPlayerName(activePlayerId)
+
+    local followingPlayerObj = getPlayerByTarget(getCurrentTarget())
+    local followingText = followingPlayerObj and followingPlayerObj.playerName or "None"
     local modeText = "unknown"
     local modeDetailText = nil
 
@@ -1042,78 +1118,67 @@ local function drawHomeTab()
     Gui.setItemTooltip("Filter by name")
 
     local players = getPlayers()
-    local playerNames = {}
-    local playerIds = {}
-    for i = 1, #players do
-        local displayName = players[i].name
-        if playerMatchesSearch(displayName, searchText) then
-            if players[i].id == activePlayerId then
-                displayName = "> " .. displayName
+
+    if #players > 0 then
+        if Gui.beginListBox("Players##Handcam_home") then
+            for i = 1, #players do
+                Gui.pushId(tostring(i))
+                local p = players[i]
+                if playerMatchesSearch(p.name, searchText) then
+                    local displayName = p.name
+                    if isSameTarget(p, getCurrentTarget()) then
+                        displayName = "> " .. displayName
+                    end
+                    if isSameTarget(p, getOwnerTarget()) then
+                        displayName = displayName .. " (Owner)"
+                    end
+
+                    local isSelected = isSameTarget(p, selectedPlayerTarget)
+
+                    if Gui.selectable(displayName, isSelected) then
+                        selectedPlayerTarget = { id = p.id, sessionIndex = p.sessionIndex }
+                    end
+                end
+                Gui.popId()
             end
-            if players[i].id == config.ownerId then
-                displayName = displayName .. " (Owner)"
-            end
-            table.insert(playerNames, displayName)
-            table.insert(playerIds, players[i].id)
+            Gui.endListBox()
         end
+    else
+        Gui.textDisabled("no players found")
     end
 
-    local currentSelection = 1
-    if selectedPlayerId then
-        for i = 1, #playerIds do
-            if playerIds[i] == selectedPlayerId then
-                currentSelection = i
-                break
-            end
-        end
-    end
+    if selectedPlayerTarget then
+        local isFollowing = isSameTarget(selectedPlayerTarget, getCurrentTarget())
+        local followLabel = isFollowing and "Following Player" or "Start Follow"
 
-    if #playerNames > 0 then
-    if Gui.beginListBox("Players##Handcam_home") then
-        for i = 1, #playerNames do
-            local id = playerIds[i]
-            local isSelected = (selectedPlayerId == id)
-            local uniquename = playerNames[i] .. "##" .. tostring(id)
-
-            if Gui.selectable(uniquename, isSelected) then
-                selectedPlayerId = id
-                currentSelection = i
-            end
-        end
-        Gui.endListBox()
-    end
-else
-    Gui.textDisabled("no players found")
-end
-
-    if selectedPlayerId then
-        local followLabel = selectedPlayerId == activePlayerId and "Following Player" or "Start Follow"
-        if selectedPlayerId == activePlayerId then
+        if isFollowing then
             Gui.beginDisabled()
         end
         if Gui.button(Icon.ChevronRight .. "  " .. followLabel) then
-            activePlayerId = selectedPlayerId
-            config.currentPlayerId = activePlayerId
+            activePlayerTarget = { id = selectedPlayerTarget.id, sessionIndex = selectedPlayerTarget.sessionIndex }
+            activePlayerId = selectedPlayerTarget.id
             if saveConfig then saveConfig() end
-            local newPlayer = getPlayerById(activePlayerId)
+            local newPlayer = getPlayerByTarget(getCurrentTarget())
             if newPlayer then
                 setViewpointMode(newPlayer)
             end
         end
-        if selectedPlayerId == activePlayerId then
+        if isFollowing then
             Gui.endDisabled()
         end
 
         Gui.sameLine()
-        local isCurrentlyOwner = (selectedPlayerId == config.ownerId)
+        local isCurrentlyOwner = isSameTarget(selectedPlayerTarget, getOwnerTarget())
         local ownerButtonText = isCurrentlyOwner and "Remove Owner" or "Set Owner"
         if Gui.button(Icon.Crown .. "  " .. ownerButtonText) then
             if isCurrentlyOwner then
+                config.ownerTarget = nil
                 config.ownerId = nil
                 ownerIsPresent = false
                 ownerPlayer = nil
             else
-                config.ownerId = selectedPlayerId
+                config.ownerTarget = { id = selectedPlayerTarget.id, sessionIndex = selectedPlayerTarget.sessionIndex }
+                config.ownerId = selectedPlayerTarget.id
                 checkForOwnerPresence()
             end
             if saveConfig then saveConfig() end
@@ -1128,7 +1193,7 @@ end
     end
 
     Gui.separatorText(Icon.Camera .. "  Camera Mode")
-    local currentPlayer = getPlayerById(activePlayerId)
+    local currentPlayer = getPlayerByTarget(getCurrentTarget())
 
     if viewpointMode then
         Gui.beginDisabled()
@@ -1508,7 +1573,7 @@ local function drawDebugTab()
     Gui.sameLine()
 
     if Gui.button("Test Third Person") then
-        local player = getPlayerById(activePlayerId)
+        local player = getPlayerByTarget(getCurrentTarget())
         if player then
             setThirdPersonMode(player)
         end
@@ -1521,7 +1586,7 @@ function Axis.onLoad()
         camera.nearClippingPlane = config.nearClip
         camera.hideNearestHead = config.hideHead
         updateNameTagsVisibility()
-        camera.rotationSmoothing = 0.01
+        camera.rotationSmoothing = 0
         camera.positionSmoothing = 0
     end
 
@@ -1615,7 +1680,7 @@ function Axis.tick(dt)
     if not initialPovSet then
         initialDelay = initialDelay + dt
         if initialDelay >= 0.1 then
-            local currentPlayer = getPlayerById(activePlayerId)
+            local currentPlayer = getPlayerByTarget(getCurrentTarget())
             if currentPlayer and currentPlayer.head then
                 setViewpointMode(currentPlayer)
                 initialPovSet = true
@@ -1637,11 +1702,11 @@ function Axis.tick(dt)
         if not activePlayerId then return end
     end
 
-    local currentPlayer = getPlayerById(activePlayerId)
+    local currentPlayer = getPlayerByTarget(getCurrentTarget())
     if not currentPlayer or not currentPlayer.head then
         activePlayerId = findAnyPlayer()
         if not activePlayerId then return end
-        currentPlayer = getPlayerById(activePlayerId)
+        currentPlayer = getPlayerByTarget(getCurrentTarget())
         if not currentPlayer or not currentPlayer.head then return end
     end
 
@@ -1740,12 +1805,12 @@ function Axis.tick(dt)
             end
         end
 
-        local headOffset = currentPlayer.head.rotation:rotateVector(config.viewpointOffset)
-        camera.position = currentPlayer.head.position + headOffset
-        camera.rotation = currentPlayer.head.rotation
-        camera.hideNearestHead = config.hideHead
-        updateNameTagsVisibility()
         camera.positionSmoothing = 0
+        camera.rotationSmoothing = 0
+        camera.hideNearestHead = config.hideHead
+        camera.position = currentPlayer.head.position
+        camera.rotation = currentPlayer.head.rotation
+        updateNameTagsVisibility()
     elseif thirdPersonMode then
         updateThirdPersonMode(currentPlayer, dt)
         if rightHandPos and isRightTrigger then
@@ -1799,6 +1864,7 @@ function Axis.tick(dt)
             end
         end
         camera.positionSmoothing = 0
+        camera.rotationSmoothing = 0
         camera.hideNearestHead = false
         updateNameTagsVisibility()
     end

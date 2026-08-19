@@ -128,7 +128,7 @@ end
 local pendingGravitySnap = false
 
 local playerSearchText = ""
-local selectedPlayerId = nil
+local selectedPlayerTarget = nil
 local followSpectatorEnabled = false
 local selectedSpectatorName = ""
 local spectatorSearchText = ""
@@ -592,7 +592,6 @@ end
 		Gui.newLine()
 
 		Gui.separatorText("Debug")
-		camera.hideNearestHead = Gui.checkbox("Hide nearest head", camera.hideNearestHead)
 
 		local newSpaceKeybind = Gui.checkbox("Enable Space Keybind", Inputs.enableSpaceKeybind)
 		if newSpaceKeybind ~= Inputs.enableSpaceKeybind then
@@ -638,32 +637,35 @@ end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Users, "Players")) then
 		local players = {}
-        local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
-        
-        for i = 1, #sessions do
-            local session = sessions[i]
-            if session and session.players then
-                for j = 1, #session.players do
-                    local pInfo = session.players[j]
-                    if pInfo and pInfo.playerId then
-                        local p = session.getPlayerById and session:getPlayerById(pInfo.playerId) or pInfo
-                        if p and p.playerName then
-                            table.insert(players, { id = pInfo.playerId, name = p.playerName, object = p })
-                        end
-                    end
-                end
-            end
-        end
+		local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
 
-        local gameData = getGameData()
-        local spectatorList = (gameData and gameData.spectators) and gameData.spectators or {}
+		for i = 1, #sessions do
+			local session = sessions[i]
+			if session and session.players then
+				for j = 1, #session.players do
+					local pInfo = session.players[j]
+					if pInfo and pInfo.playerId then
+						local p = session.getPlayerById and session:getPlayerById(pInfo.playerId) or pInfo
+						if p and p.playerName then
+							table.insert(players, { id = pInfo.playerId, sessionIndex = i, name = p.playerName, object = p })
+						end
+					end
+				end
+			end
+		end
 
-        local selectedPlayerObj = nil
-        if selectedPlayerId then
-            for _, p in ipairs(players) do
-                if p.id == selectedPlayerId then selectedPlayerObj = p.object; break end
-            end
-        end
+		local gameData = getGameData()
+		local spectatorList = (gameData and gameData.spectators) and gameData.spectators or {}
+
+		local selectedPlayerObj = nil
+		if selectedPlayerTarget then
+			for _, p in ipairs(players) do
+				if p.id == selectedPlayerTarget.id and p.sessionIndex == selectedPlayerTarget.sessionIndex then
+					selectedPlayerObj = p.object
+					break
+				end
+			end
+		end
 
         local selectedSpectator = nil
         if selectedSpectatorName ~= "" then
@@ -704,13 +706,17 @@ end
         
         if Gui.beginListBox("##PlayersList") then
 			for i, p in ipairs(players) do
+				Gui.pushId(tostring(i))
 				if playerSearchText == "" or string.find(string.lower(p.name), string.lower(playerSearchText), 1, true) then
-					local uniqueLabel = p.name .. "##" .. tostring(i)
-					
-					if Gui.selectable(uniqueLabel, selectedPlayerId == p.id) then
-						selectedPlayerId = p.id
+					local isSelected = selectedPlayerTarget ~= nil 
+						and p.id == selectedPlayerTarget.id 
+						and p.sessionIndex == selectedPlayerTarget.sessionIndex
+
+					if Gui.selectable(p.name, isSelected) then
+						selectedPlayerTarget = { id = p.id, sessionIndex = p.sessionIndex }
 					end
 				end
+				Gui.popId()
 			end
 			Gui.endListBox()
 		end
@@ -750,7 +756,7 @@ end
 			Gui.sameLine()
 
 			if Gui.button(Icon.ChevronRight .. "  Start Handcam following") then
-				config.currentPlayerId = selectedPlayerId
+				config.currentPlayerId = selectedPlayerTarget.id
 				if saveConfig then saveConfig() end
 				
 				if not Axis.isEnabled then
@@ -838,7 +844,6 @@ function tick(dt)
 		end
 	end
 
-	camera.hideNearestHead = false
 	Models.tick(dt)
 	timer = timer + dt
 
@@ -873,6 +878,7 @@ function tick(dt)
     end
 
 	if Axis.isEnabled then
+		camera.hideNearestHead = true
 		Axis.tick(dt)
 		return
 	end
