@@ -878,7 +878,6 @@ function tick(dt)
     end
 
 	if Axis.isEnabled then
-		camera.hideNearestHead = true
 		Axis.tick(dt)
 		return
 	end

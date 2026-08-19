@@ -324,17 +324,16 @@ end
 
 local function getHandPosition(player, isLeftHand)
     if not player or not player.root or not player.root.position or not player.root.rotation then return nil, nil end
-    local handPos, handRot = nil, nil
     if isLeftHand then
         if player.leftHand and player.leftHand.position and player.leftHand.rotation then
-            handPos = player.root.position + player.root.rotation:rotateVector(player.leftHand.position)
-            handRot = player.leftHand.rotation
+            local handPos = player.root.position + player.root.rotation:rotateVector(player.leftHand.position)
+            local handRot = player.root.rotation * player.leftHand.rotation
             return handPos, handRot
         end
     else
         if player.rightHand and player.rightHand.position and player.rightHand.rotation then
-            handPos = player.root.position + player.root.rotation:rotateVector(player.rightHand.position)
-            handRot = player.rightHand.rotation
+            local handPos = player.root.position + player.root.rotation:rotateVector(player.rightHand.position)
+            local handRot = player.root.rotation * player.rightHand.rotation
             return handPos, handRot
         end
     end
@@ -789,7 +788,7 @@ local function updateSlingshot(dt)
     end
 end
 
-local function beginRightHandGrip(player, handPos, handRot)
+function beginRightHandGrip(player, handPos, handRot)
     if not player or not handPos or not handRot then return end
     local headPos = player.head.position
     local headToHand = handPos - headPos
@@ -806,8 +805,6 @@ local function beginRightHandGrip(player, handPos, handRot)
         camera:lookAt(lookAwayPoint, worldUp)
     end
     camera.hideNearestHead = false
-    camera.positionSmoothing = 0
-    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
 
     currentExtension = config.minExtension
@@ -817,7 +814,6 @@ local function beginRightHandGrip(player, handPos, handRot)
     handHolding = "right"
     viewpointMode = false
     thirdPersonMode = false
-    manualOrbitMode = false
     freeFloatingMode = false
     ballMode = false
     ballIndex = 0
@@ -826,9 +822,11 @@ local function beginRightHandGrip(player, handPos, handRot)
     isRightGrabAttempt = false
     isLeftGrabAttempt = false
     grabAttemptTime = 0
+
+    if debugMode then print("Camera grabbed with right hand") end
 end
 
-local function beginLeftHandGrip(player, handPos, handRot)
+function beginLeftHandGrip(player, handPos, handRot)
     if not player or not handPos or not handRot then return end
     local headPos = player.head.position
     local headToHand = handPos - headPos
@@ -845,8 +843,6 @@ local function beginLeftHandGrip(player, handPos, handRot)
         camera:lookAt(lookAwayPoint, worldUp)
     end
     camera.hideNearestHead = false
-    camera.positionSmoothing = 0
-    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
 
     currentExtension = config.minExtension
@@ -864,9 +860,11 @@ local function beginLeftHandGrip(player, handPos, handRot)
     isRightGrabAttempt = false
     isLeftGrabAttempt = false
     grabAttemptTime = 0
+
+    if debugMode then print("Camera grabbed with left hand") end
 end
 
-local function updateRightHandGrip(player, handPos, handRot, dt)
+function updateRightHandGrip(player, handPos, handRot, dt)
     if not player or not handPos or not handRot then return end
     local headPos = player.head.position
     local headToHand = handPos - headPos
@@ -880,6 +878,7 @@ local function updateRightHandGrip(player, handPos, handRot, dt)
     local leftGripPressed = isGripPressed(player, true)
     local leftTriggerPressed = isTriggerPressed(player, true)
     
+    -- Detect double-click on secondary trigger (left trigger)
     if leftTriggerPressed and not lastSecondaryTriggerState then
         table.insert(triggerPressTimes, t)
         while #triggerPressTimes > 0 and t - triggerPressTimes[1] > config.doubleClickThreshold do
@@ -923,12 +922,15 @@ local function updateRightHandGrip(player, handPos, handRot, dt)
     end
     
     camera.hideNearestHead = false
-    camera.positionSmoothing = 0
-    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
+    camera.positionSmoothing = 0
+    
+    if debugMode then
+        print("Right Hand Grip: Extension=" .. tostring(currentExtension) .. ", Facing=" .. tostring(facingUser))
+    end
 end
 
-local function updateLeftHandGrip(player, handPos, handRot, dt)
+function updateLeftHandGrip(player, handPos, handRot, dt)
     if not player or not handPos or not handRot then return end
     local headPos = player.head.position
     local headToHand = handPos - headPos
@@ -942,6 +944,7 @@ local function updateLeftHandGrip(player, handPos, handRot, dt)
     local rightGripPressed = isGripPressed(player, false)
     local rightTriggerPressed = isTriggerPressed(player, false)
     
+    -- Detect double-click on secondary trigger (right trigger)
     if rightTriggerPressed and not lastSecondaryTriggerState then
         table.insert(triggerPressTimes, t)
         while #triggerPressTimes > 0 and t - triggerPressTimes[1] > config.doubleClickThreshold do
@@ -985,9 +988,12 @@ local function updateLeftHandGrip(player, handPos, handRot, dt)
     end
     
     camera.hideNearestHead = false
-    camera.positionSmoothing = 0
-    camera.rotationSmoothing = 0
     updateNameTagsVisibility()
+    camera.positionSmoothing = 0
+    
+    if debugMode then
+        print("Left Hand Grip: Extension=" .. tostring(currentExtension) .. ", Facing=" .. tostring(facingUser))
+    end
 end
 
 local function handleCameraRelease(player)
