@@ -23,6 +23,14 @@ config.orbitRadius = config.orbitRadius or 300
 config.orbitRotSpeed = config.orbitRotSpeed or 180
 config.orbitMouseSensitivity = config.orbitMouseSensitivity or 3.6
 config.orbitMouseWheelSensitivity = config.orbitMouseWheelSensitivity or 50
+config.cameraSmoothness = config.cameraSmoothness or 0.1
+
+if config.enableGripModeToggle == nil then config.enableGripModeToggle = true end
+config.gripToggleDelayTime = config.gripToggleDelayTime or 0.2
+
+local headGripAttemptTime = 0
+local isHeadGripAttempt = false
+local headGripToggled = false
 
 local manualOrbitMode = false
 local cameraDirectionEuler = Vec3.new(0, 0, 0)
@@ -392,12 +400,31 @@ local function applySettingsChange(changed)
         if not thirdPersonMode then
             camera.fieldOfView = config.fov
         end
+        if viewpointMode or thirdPersonMode or manualOrbitMode or cameraInHand then
+                applyCameraSmoothness()
+        else
+            disableCameraSmoothness()
+        end
         if viewpointMode then
             camera.hideNearestHead = config.hideHead
         end
         updateNameTagsVisibility()
     end
     queueConfigSave()
+end
+
+local function applyCameraSmoothness()
+    if camera then
+        camera.positionSmoothing = config.cameraSmoothness
+        camera.rotationSmoothing = config.cameraSmoothness
+    end
+end
+
+local function disableCameraSmoothness()
+    if camera then
+        camera.positionSmoothing = 0
+        camera.rotationSmoothing = 0
+    end
 end
 
 local function flipCameraView()
@@ -411,8 +438,7 @@ end
 
 local function setViewpointMode(player)
     if not player or not player.head then return end
-    camera.positionSmoothing = 0
-    camera.rotationSmoothing = 0
+    applyCameraSmoothness()
     camera.nearClippingPlane = config.nearClip
     camera.fieldOfView = config.fov
     camera.hideNearestHead = config.hideHead
@@ -457,8 +483,7 @@ local function setThirdPersonMode(player)
     end
     camera.rotation = headRot
     camera.hideNearestHead = false
-    camera.positionSmoothing = 0.1
-    camera.rotationSmoothing = 0.1
+    applyCameraSmoothness()
     updateNameTagsVisibility()
 end
 
@@ -483,8 +508,7 @@ local function setManualOrbitMode(player)
     end
 
     camera.hideNearestHead = false
-    camera.positionSmoothing = 0.1
-    camera.rotationSmoothing = 0.1
+    applyCameraSmoothness()
     updateNameTagsVisibility()
 end
 
@@ -530,8 +554,6 @@ local function updateManualOrbitMode(player, dt)
         Quat.fromEuler(cameraDirectionEuler.x, cameraDirectionEuler.y, cameraDirectionEuler.z):getForwardVector()
     ) * -1
 
-    camera.positionSmoothing = 0.1
-    camera.rotationSmoothing = 0.1
     camera.position = player.head.position + cameraDirection * config.orbitRadius
     local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
     camera:lookAt(player.head.position, upVector)
@@ -547,8 +569,6 @@ local function updateThirdPersonMode(player, dt)
     if hit.successful then
         targetPos = hit.position + (hit.normal * 10)
     end
-    camera.positionSmoothing = 0.1
-    camera.rotationSmoothing = 0.1
     camera.position = targetPos
     local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
     camera:lookAt(headPos, upVector)
@@ -826,6 +846,7 @@ function beginRightHandGrip(player, handPos, handRot)
     end
     camera.hideNearestHead = false
     updateNameTagsVisibility()
+    applyCameraSmoothness()
 
     currentExtension = config.minExtension
     targetExtension = config.minExtension
@@ -864,6 +885,7 @@ function beginLeftHandGrip(player, handPos, handRot)
     end
     camera.hideNearestHead = false
     updateNameTagsVisibility()
+    applyCameraSmoothness()
 
     currentExtension = config.minExtension
     targetExtension = config.minExtension
@@ -943,7 +965,7 @@ function updateRightHandGrip(player, handPos, handRot, dt)
     
     camera.hideNearestHead = false
     updateNameTagsVisibility()
-    camera.positionSmoothing = 0
+    applyCameraSmoothness()
     
     if debugMode then
         print("Right Hand Grip: Extension=" .. tostring(currentExtension) .. ", Facing=" .. tostring(facingUser))
@@ -1009,7 +1031,7 @@ function updateLeftHandGrip(player, handPos, handRot, dt)
     
     camera.hideNearestHead = false
     updateNameTagsVisibility()
-    camera.positionSmoothing = 0
+    applyCameraSmoothness()
     
     if debugMode then
         print("Left Hand Grip: Extension=" .. tostring(currentExtension) .. ", Facing=" .. tostring(facingUser))
@@ -1341,6 +1363,17 @@ local function drawSettingsTab()
         changed = true
     end
 
+    local newCameraSmoothness = Gui.sliderFloat("Camera Smoothness", config.cameraSmoothness, 0, 1)
+    if newCameraSmoothness ~= config.cameraSmoothness then
+        config.cameraSmoothness = newCameraSmoothness
+        if thirdPersonMode or manualOrbitMode then
+            applyCameraSmoothness()
+        else
+            disableCameraSmoothness()
+        end
+        changed = true
+    end
+
     local nameTagTypeString = "Show Name Tags when not in POV"
     if config.nameTagType == 0 then
         nameTagTypeString = "Always show Name Tags"
@@ -1446,6 +1479,20 @@ local function drawSettingsTab()
         if newOwnerRecallTime ~= config.ownerRecallTime then
             config.ownerRecallTime = newOwnerRecallTime
             changed = true
+        end
+
+        local newEnableGripModeToggle = Gui.checkbox("enable grip first/third person toggle", config.enableGripModeToggle)
+        if newEnableGripModeToggle ~= config.enableGripModeToggle then
+            config.enableGripModeToggle = newEnableGripModeToggle
+            changed = true
+        end
+
+        if config.enableGripModeToggle then
+            local newGripToggleDelayTime = Gui.sliderFloat("grip toggle delay time (sec)", config.gripToggleDelayTime, 0.0, 2.0)
+            if newGripToggleDelayTime ~= config.gripToggleDelayTime then
+                config.gripToggleDelayTime = newGripToggleDelayTime
+                changed = true
+            end
         end
 
         local newHeadGrabRadius = Gui.sliderFloat("head grab range", config.headGrabRadius, 10, 100)
@@ -1618,13 +1665,15 @@ function Axis.onLoad()
         camera.nearClippingPlane = config.nearClip
         camera.hideNearestHead = config.hideHead
         updateNameTagsVisibility()
-        camera.rotationSmoothing = 0
-        camera.positionSmoothing = 0
+        applyCameraSmoothness()
     end
 
     slingshotAngleX, slingshotAngleY, slingshotAngleZ = 0, 0, 0
     slingshotSpinX, slingshotSpinY, slingshotSpinZ = 0, 0, 0
 
+    headGripAttemptTime = 0
+    isHeadGripAttempt = false
+    headGripToggled = false
     activePlayerId = nil
     viewpointMode = true
     thirdPersonMode = false
@@ -1752,21 +1801,41 @@ function Axis.tick(dt)
     local isRightTrigger = isTriggerPressed(currentPlayer, false)
     local isLeftTrigger = isTriggerPressed(currentPlayer, true)
 
-    local rightGripPressed = isGripPressed(currentPlayer, false)
-    if (viewpointMode or thirdPersonMode) and rightHandPos and currentPlayer.head then
-        local distToHead = Vec3.distance(rightHandPos, currentPlayer.head.position)
-        if distToHead <= config.headDropRadius and rightGripPressed and not lastHeadModeToggleRightGripState then
-            isRightGrabAttempt = false
-            isLeftGrabAttempt = false
-            grabAttemptTime = 0
-            if viewpointMode then
-                setThirdPersonMode(currentPlayer)
-            else
-                setViewpointMode(currentPlayer)
+    if config.enableGripModeToggle and (viewpointMode or thirdPersonMode) and currentPlayer.head then
+        local rightGripPressed = isGripPressed(currentPlayer, false)
+        local leftGripPressed = isGripPressed(currentPlayer, true)
+        local rightNear = rightHandPos and (Vec3.distance(rightHandPos, currentPlayer.head.position) <= config.headDropRadius)
+        local leftNear = leftHandPos and (Vec3.distance(leftHandPos, currentPlayer.head.position) <= config.headDropRadius)
+        local isGripActive = (rightGripPressed and rightNear) or (leftGripPressed and leftNear)
+
+        if isGripActive then
+            if not headGripToggled then
+                if not isHeadGripAttempt then
+                    isHeadGripAttempt = true
+                    headGripAttemptTime = t
+                elseif (t - headGripAttemptTime) >= config.gripToggleDelayTime then
+                    isHeadGripAttempt = false
+                    headGripToggled = true
+                    isRightGrabAttempt = false
+                    isLeftGrabAttempt = false
+                    grabAttemptTime = 0
+                    if viewpointMode then
+                        setThirdPersonMode(currentPlayer)
+                    else
+                        setViewpointMode(currentPlayer)
+                    end
+                end
             end
+        else
+            isHeadGripAttempt = false
+            headGripToggled = false
+            headGripAttemptTime = 0
         end
+    else
+        isHeadGripAttempt = false
+        headGripToggled = false
+        headGripAttemptTime = 0
     end
-    lastHeadModeToggleRightGripState = rightGripPressed
 
     if ballMode then
         updateBallMode()
@@ -1837,8 +1906,7 @@ function Axis.tick(dt)
             end
         end
 
-        camera.positionSmoothing = 0
-        camera.rotationSmoothing = 0
+        applyCameraSmoothness()
         camera.hideNearestHead = config.hideHead
         camera.position = currentPlayer.head.position
         camera.rotation = currentPlayer.head.rotation

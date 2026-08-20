@@ -4,19 +4,60 @@ local Emotes = require("emotes")
 local Models = require("models")
 local Axis = require("axis")
 
+config = config or {}
+
 local moveSpeed = config.moveSpeed or 1600
 local mouseSensitivity = config.mouseSensitivity or 3.6
 local gravityChaser = gravity.upRotation
 local tabTitleMode = config.tabTitleMode or "icon+name"
-local showModelsTab = config.showModelsTab ~= nil and config.showModelsTab or true
-config.showAxisDebug = config.showAxisDebug or false
-Inputs.enableSpaceKeybind = config.enableSpaceKeybind or false
+local showCurrentServer = config.showCurrentServer
+if showCurrentServer == nil then showCurrentServer = true end
+local showModelsTab = config.showModelsTab
+if showModelsTab == nil then showModelsTab = true end
+config.showAxisDebug = config.showAxisDebug ~= nil and config.showAxisDebug or false
+Inputs.enableSpaceKeybind = config.enableSpaceKeybind ~= nil and config.enableSpaceKeybind or false
+if config.alignToGravity == nil then config.alignToGravity = true end
+Inputs.alignToGravity = config.alignToGravity
+if config.localMovementAxesDefault == nil then config.localMovementAxesDefault = true end
+Inputs.localMovementAxesDefault = config.localMovementAxesDefault
+Inputs.speedAdjustmentRate = config.speedAdjustmentRate or Inputs.speedAdjustmentRate
+Inputs.lookSmoothness = config.lookSmoothness or Inputs.lookSmoothness
+Inputs.smoothing = config.smoothing ~= nil and config.smoothing or false
+Inputs.playGoalExplosions = config.playGoalExplosions ~= nil and config.playGoalExplosions or false
+Inputs.playScraprunSpinners = config.playScraprunSpinners ~= nil and config.playScraprunSpinners or false
+if config.placeBallEnabled == nil then config.placeBallEnabled = true end
+Inputs.placeBallEnabled = config.placeBallEnabled
+Inputs.ballScaleMultiplier = config.ballScaleMultiplier or Inputs.ballScaleMultiplier
+if config.showNameTags == nil then config.showNameTags = camera.showNameTags end
+camera.showNameTags = config.showNameTags
 local mutedPlayers = {}
 
 local screenshotWidth = config.screenshotWidth or 1920
 local screenshotHeight = config.screenshotHeight or 1080
-local useF9Screenshot = config.useF9Screenshot or true 
 local screenshotSuccessTimer = 0
+
+local enableScreenshotKey = config.enableScreenshotKey
+if enableScreenshotKey == nil then
+		enableScreenshotKey = config.useF9Screenshot
+		if enableScreenshotKey == nil then enableScreenshotKey = true end
+end
+local screenshotKeyStr = config.screenshotKeyStr or "F9"
+
+local enableFreecamKey = config.enableFreecamKey ~= nil and config.enableFreecamKey or false
+local freecamKeyStr = config.freecamKeyStr or "F8"
+
+local enableHandcamKey = config.enableHandcamKey ~= nil and config.enableHandcamKey or false
+local handcamKeyStr = config.handcamKeyStr or "F7"
+
+local function parseKeyStr(keyStr: string)
+	if not keyStr or keyStr == "" then
+		return nil
+	end
+	if string.find(keyStr, "Mouse") then
+		return nil
+	end
+	return Input.Key[keyStr]
+end
 
 local emoteLabels = {
 	[0] = { "None" },
@@ -134,9 +175,9 @@ local selectedSpectatorName = ""
 local spectatorSearchText = ""
 local spectatorList = {}
 
-local emoteCycling = false
+local emoteCycling = config.emoteCycling ~= nil and config.emoteCycling or false
 local lastEmoteCycleTime = 0
-local emoteCycleInterval = 1.0
+local emoteCycleInterval = config.emoteCycleInterval or 1.0
 local timer = 0
 
 local flipActive = false
@@ -200,9 +241,10 @@ end
 function onGui()
 	Gui.text("procam")
 
-	Gui.sameLine()
-
-	Gui.textDisabled(serverName)
+	if showCurrentServer then
+		Gui.sameLine()
+		Gui.textDisabled(serverName)
+	end
 
 	Gui.sameLine()
 
@@ -241,27 +283,67 @@ function onGui()
 			Gui.endChild()
 			Gui.newLine()
 
-			emoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
+			local newEmoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
+			if newEmoteCycling ~= emoteCycling then
+				emoteCycling = newEmoteCycling
+				config.emoteCycling = emoteCycling
+				if saveConfig then saveConfig() end
+			end
 			Gui.setItemTooltip("Enable cycling through emotes")
 
 			if emoteCycling then
 				Gui.sameLine()
-                emoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
+                local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
+				if newEmoteCycleInterval ~= emoteCycleInterval then
+					emoteCycleInterval = newEmoteCycleInterval
+					config.emoteCycleInterval = emoteCycleInterval
+					if saveConfig then saveConfig() end
+				end
             end
 		end
 
 		Gui.separatorText("Quick Settings")
 
-		camera.showNameTags = Gui.checkbox("Show name tags", camera.showNameTags)
-		Inputs.alignToGravity = Gui.checkbox("Automatically Align to Gravity", Inputs.alignToGravity)
-		Inputs.localMovementAxesDefault = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
+		local newShowNameTags = Gui.checkbox("Show name tags", camera.showNameTags)
+		if newShowNameTags ~= camera.showNameTags then
+			camera.showNameTags = newShowNameTags
+			config.showNameTags = newShowNameTags
+			if saveConfig then saveConfig() end
+		end
+		local newAlignToGravity = Gui.checkbox("Automatically Align to Gravity", Inputs.alignToGravity)
+		if newAlignToGravity ~= Inputs.alignToGravity then
+			Inputs.alignToGravity = newAlignToGravity
+			config.alignToGravity = newAlignToGravity
+			if saveConfig then saveConfig() end
+		end
+		local newLocalMovementAxes = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
+		if newLocalMovementAxes ~= Inputs.localMovementAxesDefault then
+			Inputs.localMovementAxesDefault = newLocalMovementAxes
+			config.localMovementAxesDefault = newLocalMovementAxes
+			if saveConfig then saveConfig() end
+		end
 		Gui.setItemTooltip("Use Alt to switch between gravity and local movement axes")
 
 		Gui.separatorText("Movement")
 
-		moveSpeed = Gui.sliderFloat("Move Speed", moveSpeed, Inputs.minMoveSpeed, Inputs.maxMoveSpeed)
-		mouseSensitivity = Gui.sliderFloat("Mouse Sensitivity", mouseSensitivity, 0, 10)
-		Inputs.speedAdjustmentRate = Gui.sliderFloat("Speed Acceleration", Inputs.speedAdjustmentRate, 0, 5)
+		local newMoveSpeed = Gui.sliderFloat("Move Speed", moveSpeed, Inputs.minMoveSpeed, Inputs.maxMoveSpeed)
+		if newMoveSpeed ~= moveSpeed then
+			moveSpeed = newMoveSpeed
+			config.moveSpeed = newMoveSpeed
+			if saveConfig then saveConfig() end
+		end
+		local newMouseSensitivity = Gui.sliderFloat("Mouse Sensitivity", mouseSensitivity, 0, 10)
+		if newMouseSensitivity ~= mouseSensitivity then
+			mouseSensitivity = newMouseSensitivity
+			config.mouseSensitivity = newMouseSensitivity
+			if saveConfig then saveConfig() end
+		end
+		local newSpeedAdjustmentRate = Gui.sliderFloat("Speed Acceleration", Inputs.speedAdjustmentRate, 0, 5)
+		if newSpeedAdjustmentRate ~= Inputs.speedAdjustmentRate then
+			Inputs.speedAdjustmentRate = newSpeedAdjustmentRate
+			config.speedAdjustmentRate = newSpeedAdjustmentRate
+			if saveConfig then saveConfig() end
+		end
 		Gui.setItemTooltip("How fast the speed adjustment buttons affect the camera speed")
 		
 		Gui.separatorText("Camera Controls")
@@ -369,13 +451,6 @@ function onGui()
 			end
 
 			Gui.separator()
-
-			local newF9Setting = Gui.checkbox("Enable F9 Screenshot Hotkey", useF9Screenshot)
-			if newF9Setting ~= useF9Screenshot then
-				useF9Screenshot = newF9Setting
-				config.useF9Screenshot = useF9Screenshot
-				if saveConfig then saveConfig() end
-			end
 
 			if Gui.button(Icon.Camera .. "  Take Screenshot") then
 				triggerScreenshot()
@@ -500,6 +575,80 @@ end
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Cog, "Settings")) then
+		Gui.separatorText("Keybinds")
+		Gui.textDisabled("Type key names like F9, L, or SpaceBar. Mouse keybinds are not recognized.")
+
+		enableScreenshotKey = Gui.checkbox("Screenshot##EnableShot", enableScreenshotKey)
+		if enableScreenshotKey ~= config.enableScreenshotKey then
+			config.enableScreenshotKey = enableScreenshotKey
+			if saveConfig then saveConfig() end
+		end
+		Gui.sameLine()
+		if not enableScreenshotKey then
+			Gui.beginDisabled()
+		end
+		local newScreenshotKey = Gui.inputText("##ShotKeyInput", screenshotKeyStr)
+		if newScreenshotKey ~= screenshotKeyStr then
+			screenshotKeyStr = newScreenshotKey
+			config.screenshotKeyStr = screenshotKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if not enableScreenshotKey then
+			Gui.endDisabled()
+		end
+		if parseKeyStr(screenshotKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
+		enableFreecamKey = Gui.checkbox("Freecam##EnableFree", enableFreecamKey)
+		if enableFreecamKey ~= config.enableFreecamKey then
+			config.enableFreecamKey = enableFreecamKey
+			if saveConfig then saveConfig() end
+		end
+		Gui.sameLine()
+		if not enableFreecamKey then
+			Gui.beginDisabled()
+		end
+		local newFreecamKey = Gui.inputText("##FreeKeyInput", freecamKeyStr)
+		if newFreecamKey ~= freecamKeyStr then
+			freecamKeyStr = newFreecamKey
+			config.freecamKeyStr = freecamKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if not enableFreecamKey then
+			Gui.endDisabled()
+		end
+		if parseKeyStr(freecamKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
+		enableHandcamKey = Gui.checkbox("Handcam##EnableHand", enableHandcamKey)
+		if enableHandcamKey ~= config.enableHandcamKey then
+			config.enableHandcamKey = enableHandcamKey
+			if saveConfig then saveConfig() end
+		end
+		Gui.sameLine()
+		if not enableHandcamKey then
+			Gui.beginDisabled()
+		end
+		local newHandcamKey = Gui.inputText("##HandKeyInput", handcamKeyStr)
+		if newHandcamKey ~= handcamKeyStr then
+			handcamKeyStr = newHandcamKey
+			config.handcamKeyStr = handcamKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if not enableHandcamKey then
+			Gui.endDisabled()
+		end
+		if parseKeyStr(handcamKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
+		Gui.newLine()
+
 		Gui.separatorText("Controls")
 		if Gui.beginTable("ControlsTable", 3) then
 			Gui.tableSetupColumn("Action", 0, 0.4)
@@ -539,14 +688,21 @@ end
 		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
 		if newSmoothing ~= Inputs.smoothing then
 			Inputs.smoothing = newSmoothing
+			config.smoothing = newSmoothing
 			Util.setSmoothing(Inputs.smoothing, Inputs)
+			if saveConfig then saveConfig() end
 		end
 		
 		if not Inputs.smoothing then
 			Gui.beginDisabled()
 		end
 		
-		Inputs.lookSmoothness = Gui.sliderFloat("Look Smoothness", Inputs.lookSmoothness, 0, 1)
+		local newLookSmoothness = Gui.sliderFloat("Look Smoothness", Inputs.lookSmoothness, 0, 1)
+		if newLookSmoothness ~= Inputs.lookSmoothness then
+			Inputs.lookSmoothness = newLookSmoothness
+			config.lookSmoothness = newLookSmoothness
+			if saveConfig then saveConfig() end
+		end
 		
 		if not Inputs.smoothing then
 			Gui.endDisabled()
@@ -560,6 +716,13 @@ end
 		if newShowModelsTab ~= showModelsTab then
 			showModelsTab = newShowModelsTab
 			config.showModelsTab = showModelsTab
+			if saveConfig then saveConfig() end
+		end
+
+		local newShowCurrentServer = Gui.checkbox("Show current server", showCurrentServer)
+		if newShowCurrentServer ~= showCurrentServer then
+			showCurrentServer = newShowCurrentServer
+			config.showCurrentServer = showCurrentServer
 			if saveConfig then saveConfig() end
 		end
 
@@ -611,25 +774,33 @@ end
 		local newGoalExplosions = Gui.checkbox("Goal explosions", Inputs.playGoalExplosions)
 		if newGoalExplosions ~= Inputs.playGoalExplosions then
 			Inputs.playGoalExplosions = newGoalExplosions
+			config.playGoalExplosions = newGoalExplosions
 			spectatorDebug.goalExplosions = Inputs.playGoalExplosions
+			if saveConfig then saveConfig() end
 		end
 
 		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
 		if newScraprunSpinners ~= Inputs.playScraprunSpinners then
 			Inputs.playScraprunSpinners = newScraprunSpinners
+			config.playScraprunSpinners = newScraprunSpinners
 			spectatorDebug.scrapRunSpinners = Inputs.playScraprunSpinners
+			if saveConfig then saveConfig() end
 		end
 
 		local newPlaceBallEnabled = Gui.checkbox("'Place Ball' visuals", Inputs.placeBallEnabled)
 		if newPlaceBallEnabled ~= Inputs.placeBallEnabled then
 			Inputs.placeBallEnabled = newPlaceBallEnabled
+			config.placeBallEnabled = newPlaceBallEnabled
 			spectatorDebug.placeBallHereVisuals = Inputs.placeBallEnabled
+			if saveConfig then saveConfig() end
 		end
 
 		local newBallScaleMultiplier = Gui.sliderFloat("Ball scale multiplier", Inputs.ballScaleMultiplier, 0, 10)
 		if newBallScaleMultiplier ~= Inputs.ballScaleMultiplier then
 			Inputs.ballScaleMultiplier = newBallScaleMultiplier
+			config.ballScaleMultiplier = newBallScaleMultiplier
 			spectatorDebug.replayBallScaleMultiplier = Inputs.ballScaleMultiplier
+			if saveConfig then saveConfig() end
 		end
 
 		Gui.endTabItem()
@@ -851,8 +1022,30 @@ function tick(dt)
 		screenshotSuccessTimer = math.max(0, screenshotSuccessTimer - dt)
 	end
 
-	if useF9Screenshot and Input.getKeyDown(Input.Key.F9) then
-		triggerScreenshot()
+	if enableScreenshotKey then
+		local keyEnum = parseKeyStr(screenshotKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) then
+			triggerScreenshot()
+		end
+	end
+
+	if enableFreecamKey then
+		local keyEnum = parseKeyStr(freecamKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) then
+			if Axis.isEnabled then
+				Axis.isEnabled = false
+			end
+		end
+	end
+
+	if enableHandcamKey then
+		local keyEnum = parseKeyStr(handcamKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) then
+			if not Axis.isEnabled then
+				Axis.isEnabled = true
+				Axis.onLoad()
+			end
+		end
 	end
 
 	currentEmoteTimer += dt
