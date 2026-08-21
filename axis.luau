@@ -1,3 +1,5 @@
+local Util = require("util")
+
 local Axis = {}
 Axis.isEnabled = false
 
@@ -1191,8 +1193,6 @@ local function drawHomeTab()
             end
             Gui.endListBox()
         end
-    else
-        Gui.textDisabled("no players found")
     end
 
     if selectedPlayerTarget then
@@ -1291,7 +1291,7 @@ local function drawHomeTab()
     Gui.setItemTooltip("Manually orbit around the selected player using WASD and Mouse.")
 
     if not currentPlayer then
-        Gui.textDisabled("a valid player target is needed for mode switches.")
+        Gui.textDisabled("Select a player first.")
     end
 end
 

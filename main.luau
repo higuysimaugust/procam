@@ -8,6 +8,9 @@ config = config or {}
 
 local moveSpeed = config.moveSpeed or 1600
 local mouseSensitivity = config.mouseSensitivity or 3.6
+local collisionEnabled = config.collisionEnabled
+if collisionEnabled == nil then collisionEnabled = false end
+local collisionRadius = 100
 local gravityChaser = gravity.upRotation
 local tabTitleMode = config.tabTitleMode or "icon+name"
 local showCurrentServer = config.showCurrentServer
@@ -44,10 +47,27 @@ end
 local screenshotKeyStr = config.screenshotKeyStr or "F9"
 
 local enableFreecamKey = config.enableFreecamKey ~= nil and config.enableFreecamKey or false
-local freecamKeyStr = config.freecamKeyStr or "F8"
+local freecamKeyStr = config.freecamKeyStr or "LeftBracket"
 
 local enableHandcamKey = config.enableHandcamKey ~= nil and config.enableHandcamKey or false
-local handcamKeyStr = config.handcamKeyStr or "F7"
+local handcamKeyStr = config.handcamKeyStr or "RightBracket"
+
+local enableEmoteToggleKey = config.enableEmoteToggleKey
+if enableEmoteToggleKey == nil then
+		enableEmoteToggleKey = config.toggleWinkEmote
+		if enableEmoteToggleKey == nil then enableEmoteToggleKey = true end
+end
+local emoteToggleKeyStr = config.emoteToggleKeyStr or "L"
+local emoteToggleId = config.emoteToggleId or 9
+
+local enableTeleportKey = config.enableTeleportKey
+if enableTeleportKey == nil then
+		enableTeleportKey = config.enableSpaceKeybind
+		if enableTeleportKey == nil then enableTeleportKey = true end
+end
+local teleportKeyStr = config.teleportKeyStr or "PageUp"
+local teleportRealm = config.teleportRealm or "Orion"
+local teleportName = config.teleportName or "Club District"
 
 local function parseKeyStr(keyStr: string)
 	if not keyStr or keyStr == "" then
@@ -71,6 +91,20 @@ local emoteLabels = {
 	[8] = { "x_x", "x_X" },
 	[9] = { "^-^", "^_-", "-_-" },
 	[10] = { "<_<", ">_>" }
+}
+
+local emoteNames = {
+	[0] = "None",
+	[1] = "Affirmative",
+	[2] = "Negative",
+	[3] = "Left",
+	[4] = "Right",
+	[5] = "Up",
+	[6] = "Down",
+	[7] = "Wave",
+	[8] = "XX",
+	[9] = "Wink",
+	[10] = "Suspicious",
 }
 
 local currentEmoteTimer = 0
@@ -158,6 +192,41 @@ local aresLocationGroups = {
         labels = { "Gamma 01", "Gamma 02", "Gamma 03" },
     },
 }
+
+local function drawLocationCombo(comboId, selectedRealm, selectedName)
+	if Gui.beginCombo(comboId, selectedName) then
+		local function drawRealm(realmName, groups)
+			if Gui.collapsingHeader(realmName) then
+				local firstGroup = true
+				for _, group in ipairs(groups) do
+					if not firstGroup then
+						Gui.separator()
+					end
+					firstGroup = false
+
+					for _, locationName in ipairs(group.labels) do
+						if startLocations[realmName][locationName] and Gui.selectable(locationName, selectedRealm == realmName and selectedName == locationName) then
+							selectedRealm = realmName
+							selectedName = locationName
+						end
+					end
+				end
+			end
+		end
+
+		drawRealm("Orion", orionLocationGroups)
+		drawRealm("Ares", aresLocationGroups)
+		if Gui.collapsingHeader("Shuttle##teleport") then
+			if startLocations.Shuttle and startLocations.Shuttle.Shuttle and Gui.selectable("Shuttle", selectedRealm == "Shuttle" and selectedName == "Shuttle") then
+				selectedRealm = "Shuttle"
+				selectedName = "Shuttle"
+			end
+		end
+
+		Gui.endCombo()
+	end
+	return selectedRealm, selectedName
+end
 
 local defaultSpawnRealm = config.defaultSpawnRealm or "Orion"
 local defaultSpawnName = config.defaultSpawnName or "Driftball District"
@@ -248,7 +317,7 @@ function onGui()
 
 	Gui.sameLine()
 
-	local activeCam = "freecam"
+	local activeCam = "Freecam"
 	if Axis.isEnabled then
 		activeCam = "Handcam"
 	end
@@ -587,6 +656,7 @@ end
 		if not enableScreenshotKey then
 			Gui.beginDisabled()
 		end
+		Gui.setNextItemWidth(200)
 		local newScreenshotKey = Gui.inputText("##ShotKeyInput", screenshotKeyStr)
 		if newScreenshotKey ~= screenshotKeyStr then
 			screenshotKeyStr = newScreenshotKey
@@ -610,6 +680,7 @@ end
 		if not enableFreecamKey then
 			Gui.beginDisabled()
 		end
+		Gui.setNextItemWidth(200)
 		local newFreecamKey = Gui.inputText("##FreeKeyInput", freecamKeyStr)
 		if newFreecamKey ~= freecamKeyStr then
 			freecamKeyStr = newFreecamKey
@@ -633,6 +704,7 @@ end
 		if not enableHandcamKey then
 			Gui.beginDisabled()
 		end
+		Gui.setNextItemWidth(200)
 		local newHandcamKey = Gui.inputText("##HandKeyInput", handcamKeyStr)
 		if newHandcamKey ~= handcamKeyStr then
 			handcamKeyStr = newHandcamKey
@@ -645,6 +717,80 @@ end
 		if parseKeyStr(handcamKeyStr) == nil then
 			Gui.sameLine()
 			Gui.textDisabled("Invalid key")
+		end
+
+		enableEmoteToggleKey = Gui.checkbox("Toggle emote##EnableEmoteToggle", enableEmoteToggleKey)
+		Gui.sameLine()
+		if not enableEmoteToggleKey then
+			Gui.beginDisabled()
+		end
+		Gui.setNextItemWidth(100)
+		local newEmoteToggleKey = Gui.inputText("##EmoteToggleKeyInput", emoteToggleKeyStr)
+		if newEmoteToggleKey ~= emoteToggleKeyStr then
+			emoteToggleKeyStr = newEmoteToggleKey
+			config.emoteToggleKeyStr = emoteToggleKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if enableEmoteToggleKey ~= config.enableEmoteToggleKey then
+			config.enableEmoteToggleKey = enableEmoteToggleKey
+			if saveConfig then saveConfig() end
+		end
+		if parseKeyStr(emoteToggleKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
+		Gui.sameLine()
+		Gui.setNextItemWidth(200)
+		local emoteToggleLabel = emoteNames[emoteToggleId] or emoteNames[9]
+		if Gui.beginCombo("Emote", emoteToggleLabel) then
+			for id = 0, 10 do
+				local label = emoteNames[id]
+				if Gui.selectable(label, emoteToggleId == id) then
+					emoteToggleId = id
+					config.emoteToggleId = emoteToggleId
+					if saveConfig then saveConfig() end
+				end
+			end
+			Gui.endCombo()
+		end
+		if not enableEmoteToggleKey then
+			Gui.endDisabled()
+		end
+
+		enableTeleportKey = Gui.checkbox("Teleport to location##EnableTeleport", enableTeleportKey)
+		Gui.sameLine()
+		if not enableTeleportKey then
+			Gui.beginDisabled()
+		end
+		Gui.setNextItemWidth(100)
+		local newTeleportKey = Gui. inputText("##TeleportKeyInput", teleportKeyStr)
+		if newTeleportKey ~= teleportKeyStr then
+			teleportKeyStr = newTeleportKey
+			config.teleportKeyStr = teleportKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if enableTeleportKey ~= config.enableTeleportKey then
+			config.enableTeleportKey = enableTeleportKey
+			if saveConfig then saveConfig() end
+		end
+		if parseKeyStr(teleportKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
+		Gui.sameLine()
+		Gui.setNextItemWidth(200)
+		local newTeleportRealm, newTeleportName = drawLocationCombo("Location", teleportRealm, teleportName)
+		if newTeleportRealm ~= teleportRealm or newTeleportName ~= teleportName then
+			teleportRealm = newTeleportRealm
+			teleportName = newTeleportName
+			config.teleportRealm = teleportRealm
+			config.teleportName = teleportName
+			if saveConfig then saveConfig() end
+		end
+		if not enableTeleportKey then
+			Gui.endDisabled()
 		end
 
 		Gui.newLine()
@@ -666,17 +812,18 @@ end
 				Gui.textDisabled(controller or "")
 			end
 
-			addRow("Move", "WASD", "Left Gamepad Stick")
+			addRow("Move", "WASD", "Left Stick")
 			addRow("Fly Up or Down", "Q / E", "Triggers")
 			addRow("Speed Up", "Left Shift", "Right Shoulder")
 			addRow("Slow Down", "Left Control", "Left Shoulder")
-			addRow("Pan", "Mouse", "Gamepad Stick")
+			addRow("Pan", "Mouse", "Right Stick")
 			addRow("Roll", "Hold Right Click", "D-Pad Left and Right")
-			addRow("Reset Roll", "Middle Mouse Click", "")
-			addRow("Align to Gravity", "Spacebar", "")
-			addRow("Frontflip", "Arrow Up", "")
-			addRow("Backflip", "Arrow Down", "")
-			addRow("Toggle Smoothing", "Caps Lock", "")
+			addRow("Reset Roll", "Middle Mouse Click", "Left Stick Click")
+			addRow("Align to Gravity", "Spacebar", "Right Stick Click")
+			addRow("Frontflip", "Arrow Up", "Y / Face Up")
+			addRow("Backflip", "Arrow Down", "A / Face Down")
+			addRow("Toggle Smoothing", "Caps Lock", "B / Face Right")
+			addRow("Toggle Freecam/Handcam", "Freecam / Handcam keybinds", "X / Face Left")
 			addRow("Zoom", "Scrollwheel", "D-Pad Up and Down")
 
 			Gui.endTable()
@@ -754,16 +901,17 @@ end
 
 		Gui.newLine()
 
-		Gui.separatorText("Debug")
-
-		local newSpaceKeybind = Gui.checkbox("Enable Space Keybind", Inputs.enableSpaceKeybind)
-		if newSpaceKeybind ~= Inputs.enableSpaceKeybind then
-			Inputs.enableSpaceKeybind = newSpaceKeybind
-			config.enableSpaceKeybind = newSpaceKeybind
+		Gui.separatorText("Experimental")
+		local newCollisionEnabled = Gui.checkbox("Enable Collisions", collisionEnabled)
+		if newCollisionEnabled ~= collisionEnabled then
+			collisionEnabled = newCollisionEnabled
+			config.collisionEnabled = collisionEnabled
 			if saveConfig then saveConfig() end
 		end
 
-		Gui.setItemTooltip("Use Page Up to teleport to Space for some privacy")
+		Gui.newLine()
+
+		Gui.separatorText("Debug")
 
 		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
 		if newShowAxisDebug ~= config.showAxisDebug then
@@ -1034,6 +1182,8 @@ function tick(dt)
 		if keyEnum and Input.getKeyDown(keyEnum) then
 			if Axis.isEnabled then
 				Axis.isEnabled = false
+				Axis.onUnload()
+				Util.setSmoothing(Inputs.smoothing, Inputs)
 			end
 		end
 	end
@@ -1045,6 +1195,17 @@ function tick(dt)
 				Axis.isEnabled = true
 				Axis.onLoad()
 			end
+		end
+	end
+
+	if Input.getKeyDown(Inputs.toggleCameraGp) then
+		if Axis.isEnabled then
+			Axis.isEnabled = false
+			Axis.onUnload()
+			Util.setSmoothing(Inputs.smoothing, Inputs)
+		else
+			Axis.isEnabled = true
+			Axis.onLoad()
 		end
 	end
 
@@ -1097,27 +1258,34 @@ function tick(dt)
 		end
 	end
 
-	if Input.getKeyDown(Inputs.toggleSmoothingKey) then
+	if Input.getKeyDown(Inputs.toggleSmoothingKey) or Input.getKeyDown(Inputs.toggleSmoothingGp) then
 		Inputs.smoothing = not Inputs.smoothing
 		Util.setSmoothing(Inputs.smoothing, Inputs)
 	end
 
-	if Inputs.enableSpaceKeybind and Input.getKeyDown(Inputs.spaceLocationKey) then
-		if startLocations.Orion and startLocations.Orion["Space"] then
-			goToLocation(startLocations.Orion["Space"])
+	if enableTeleportKey then
+		local keyEnum = parseKeyStr(teleportKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) then
+			local teleportLocation = startLocations[teleportRealm] and startLocations[teleportRealm][teleportName]
+			if teleportLocation then
+				goToLocation(teleportLocation)
+			end
 		end
 	end
 
-	if Input.getKeyDown(Input.Key.L) then
+	if enableEmoteToggleKey then
+		local keyEnum = parseKeyStr(emoteToggleKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) then
 		local currentEmote = camera:getEmote()
-		camera:setEmote(currentEmote == 9 and 0 or 9)
+			camera:setEmote(currentEmote == emoteToggleId and 0 or emoteToggleId)
+		end
 	end
 
-	if Input.getKeyDown(Input.Key.Up) and not flipActive then
+	if (Input.getKeyDown(Input.Key.Up) or Input.getKeyDown(Inputs.frontflipGp)) and not flipActive then
         flipActive = true
         flipDirection = 1
         flipTimer = 0
-    elseif Input.getKeyDown(Input.Key.Down) and not flipActive then
+	elseif (Input.getKeyDown(Input.Key.Down) or Input.getKeyDown(Inputs.backflipGp)) and not flipActive then
         flipActive = true
         flipDirection = -1
         flipTimer = 0
@@ -1184,7 +1352,7 @@ function tick(dt)
 	input += up * Input.getAnalog(Input.Gamepad.RightTriggerAxis)
 	input -= up * Input.getAnalog(Input.Gamepad.LeftTriggerAxis)
 
-	if Input.getKeyDown(Input.Key.MiddleMouseButton) then
+	if Input.getKeyDown(Input.Key.MiddleMouseButton) or Input.getKeyDown(Inputs.resetRollGp) then
 		Inputs.rotEuler.x = 0
 		Inputs.lookInputTarget.x = 0
 	end
@@ -1230,7 +1398,7 @@ function tick(dt)
 			gravityChaser = nextGravityChaser
 		end
 	end
-	if Input.getKeyDown(Inputs.snapToGravityKey) then
+	if Input.getKeyDown(Inputs.snapToGravityKey) or Input.getKeyDown(Inputs.alignToGravityGp) then
 		snapToGravity()
 	end
 
@@ -1252,7 +1420,17 @@ function tick(dt)
 		end
 	end
 
-	camera.position += input * moveSpeed * dt
+	local movement = input * moveSpeed * dt
+	if collisionEnabled and movement:length() > 0.01 then
+		local hit = camera:castRay(
+			camera.position,
+			camera.position + movement:getSafeNormal() * (movement:length() + collisionRadius)
+		)
+		if hit.successful then
+			movement -= hit.normal * movement:dot(hit.normal)
+		end
+	end
+	camera.position += movement
 	camera.rotation = gravityChaser * Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y + currentFlipOffset, Inputs.rotEuler.z)
 	local gameData = getGameData()
 	if gameData and gameData.spectators then

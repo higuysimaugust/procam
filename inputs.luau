@@ -21,6 +21,12 @@ return {
 	rollLeftGp = Input.Gamepad.DPad_Left,
 	rollRightGp = Input.Gamepad.DPad_Right,
 	rollResetTolerance = 5,
+	resetRollGp = Input.Gamepad.LeftThumbstick,
+	alignToGravityGp = Input.Gamepad.RightThumbstick,
+	toggleSmoothingGp = Input.Gamepad.FaceButton_Right,
+	frontflipGp = Input.Gamepad.FaceButton_Top,
+	backflipGp = Input.Gamepad.FaceButton_Bottom,
+	toggleCameraGp = Input.Gamepad.FaceButton_Left,
 
 	fastKey = Input.Key.LeftShift,
 	slowKey = Input.Key.LeftControl,

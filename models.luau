@@ -6,6 +6,8 @@ type Placed = {
     mesh: LuauMesh,
     name: string,
     euler: Vec3, 
+    baseRotation: Quat?,
+    rotationReference: Quat?,
     isGif: boolean?,
     isFolderGif: boolean?,
     frames: { any }?,
@@ -34,6 +36,8 @@ type PlacedText = {
     text: string,
     position: Vec3,
     euler: Vec3,
+    baseRotation: Quat?,
+    rotationReference: Quat?,
     scale: Vec3,
     color: any?,
     visible: boolean,
@@ -173,6 +177,12 @@ local function inFrontOfCamera(): Vec3
     return camera.position + camera.rotation:getForwardVector() * 400
 end
 
+local function getWorldRotation(baseRotation: Quat?, rotationReference: Quat?, euler: Vec3): Quat
+    local base = baseRotation or Quat.identity
+    local reference = rotationReference or Quat.identity
+    return base * reference:inverse() * Quat.fromEuler(euler.x, euler.y, euler.z)
+end
+
 local function getCharFileName(char: string): string?
     if char >= "A" and char <= "Z" then
         return "upper_" .. char .. ".glb"
@@ -266,7 +276,7 @@ local ADVANCE_WIDTHS: { [string]: number } = {
 local function updateTextMeshTransforms(entry: PlacedText)
     if not entry.visible or #entry.meshes == 0 then return end
 
-    local rotQuat = Quat.fromEuler(entry.euler.x, entry.euler.y, entry.euler.z)
+    local rotQuat = getWorldRotation(entry.baseRotation, entry.rotationReference, entry.euler)
     local rightVec: Vec3
     if (rotQuat :: any).getRightVector then
         rightVec = (rotQuat :: any):getRightVector()
@@ -352,7 +362,9 @@ local function spawnTextObject(initialText: string)
         name = "Text #" .. textSpawnCount,
         text = initialText,
         position = inFrontOfCamera(),
-        euler = Vec3.new(0, 0, 0),
+        euler = Vec3.zeroVector,
+        baseRotation = camera.rotation,
+        rotationReference = Quat.identity,
         scale = Vec3.new(1, 1, 1),
         brightness = 1,
         color = nil,
@@ -397,7 +409,7 @@ local function spawnModel(file: string, customScale: number?)
         return
     end
     mesh.position = inFrontOfCamera()
-    mesh.rotation = Quat.identity
+    mesh.rotation = camera.rotation
     local scale = customScale or 100
     mesh.scale = Vec3.new(scale, scale, scale)
     mesh.vertices = vertices
@@ -420,7 +432,9 @@ local function spawnModel(file: string, customScale: number?)
         mesh = mesh,
         name = cleanName .. " #" .. modelSpawnCount,
         fileName = cleanName,
-        euler = Vec3.new(0, 0, 0),
+        euler = Vec3.zeroVector,
+        baseRotation = camera.rotation,
+        rotationReference = Quat.identity,
     })
     status = "Spawned " .. cleanName .. " (" .. #vertices .. " vertices)"
 end
@@ -447,7 +461,8 @@ local function spawnImage(imageFile: string)
     end
     
     mesh.position = inFrontOfCamera()
-    mesh.rotation = Quat.fromEuler(180, 0, 180)
+    local imageRotation = Quat.fromEuler(180, 0, 180)
+    mesh.rotation = camera.rotation * imageRotation
     mesh.scale = Vec3.new(100, 100, 100)
     mesh.vertices = vertices
     mesh.triangles = triangles
@@ -504,6 +519,8 @@ local function spawnImage(imageFile: string)
         mesh = mesh,
         name = cleanName .. " #" .. imageSpawnCount,
         euler = Vec3.new(180, 0, 0),
+        baseRotation = camera.rotation,
+        rotationReference = Quat.fromEuler(180, 0, 0),
         isGif = isGif,
         isFolderGif = isFolderGif,
         frames = loadedFrames,
@@ -697,7 +714,7 @@ local function renderPlacedItems(placedList: {Placed})
                 local newEuler = Gui.dragFloat3("Rotation", entry.euler, 1, -360, 360)
                 if newEuler ~= entry.euler then
                     entry.euler = newEuler
-                    m.rotation = Quat.fromEuler(newEuler.x, newEuler.y, newEuler.z)
+                    m.rotation = getWorldRotation(entry.baseRotation, entry.rotationReference, newEuler)
                 end
             end
 
