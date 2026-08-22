@@ -73,7 +73,7 @@ local configSaveAtTime = 0
 
 local ownerIsPresent = false
 local ownerPlayer = nil
-config.defaultOwnerName = config.defaultOwnerName or "higuysimaugust"
+config.ownerName = config.ownerName or "higuysimaugust"
 local didAutoAssignDefaultOwner = false
 local lastAutoAssignAttemptTime = -1
 
@@ -309,7 +309,7 @@ local function tryAutoAssignDefaultOwner()
     local players = getPlayers()
     if #players == 0 then return false end
 
-    local targetLower = string.lower(config.defaultOwnerName or "higuysimaugust")
+    local targetLower = string.lower(config.ownerName or "higuysimaugust")
     for i = 1, #players do
         local p = players[i]
         if p and p.id and p.name and string.lower(p.name) == targetLower then
@@ -1347,15 +1347,6 @@ local function drawSettingsTab()
     local changed = false
 
     Gui.separatorText("Quick Settings")
-
-    local newDefaultOwner = Gui.inputText("Default Owner Name", config.defaultOwnerName or "")
-    if newDefaultOwner ~= config.defaultOwnerName then
-        config.defaultOwnerName = newDefaultOwner
-        didAutoAssignDefaultOwner = false
-        changed = true
-    end
-
-    Gui.setItemTooltip("If present in server, automatically gives player owner and follows")
 
     local newFov = Gui.sliderFloat("Field of View", config.fov, 60, 120)
     if newFov ~= config.fov then

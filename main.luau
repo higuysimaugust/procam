@@ -13,8 +13,6 @@ if collisionEnabled == nil then collisionEnabled = false end
 local collisionRadius = 100
 local gravityChaser = gravity.upRotation
 local tabTitleMode = config.tabTitleMode or "icon+name"
-local showCurrentServer = config.showCurrentServer
-if showCurrentServer == nil then showCurrentServer = true end
 local showModelsTab = config.showModelsTab
 if showModelsTab == nil then showModelsTab = true end
 config.showAxisDebug = config.showAxisDebug ~= nil and config.showAxisDebug or false
@@ -68,6 +66,14 @@ end
 local teleportKeyStr = config.teleportKeyStr or "PageUp"
 local teleportRealm = config.teleportRealm or "Orion"
 local teleportName = config.teleportName or "Club District"
+
+local enableDisconnectKey = config.enableDisconnectKey ~= nil and config.enableDisconnectKey or false
+local disconnectKeyStr = config.disconnectKeyStr or "R"
+local disconnectConfirmation = config.disconnectConfirmation
+if disconnectConfirmation == nil then disconnectConfirmation = true end
+local ownerName = config.ownerName or "Playername"
+config.ownerName = ownerName
+local disconnectPending = false
 
 local function parseKeyStr(keyStr: string)
 	if not keyStr or keyStr == "" then
@@ -308,18 +314,16 @@ do
 end
 
 function onGui()
-	Gui.text("procam")
-
-	if showCurrentServer then
-		Gui.sameLine()
-		Gui.textDisabled(serverName)
-	end
+	Gui.text("Procam")
 
 	Gui.sameLine()
 
 	local activeCam = "Freecam"
 	if Axis.isEnabled then
 		activeCam = "Handcam"
+	end
+	if followSpectatorEnabled then
+		activeCam = "Spectator Follow"
 	end
 
 	Gui.textDisabled("Using " .. activeCam)
@@ -370,6 +374,48 @@ function onGui()
 				end
             end
 		end
+
+		Gui.separatorText("Server")
+		local serverPlayerCount = 0
+		local serverSessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
+		for _, session in ipairs(serverSessions) do
+			if session and session.players then
+				for _, playerInfo in ipairs(session.players) do
+					if playerInfo and playerInfo.playerId then
+						local player = session.getPlayerById and session:getPlayerById(playerInfo.playerId) or playerInfo
+						if player and player.playerName then
+							serverPlayerCount += 1
+						end
+					end
+				end
+			end
+		end
+		local serverGameData = getGameData and getGameData()
+		local serverSpectatorCount = serverGameData and serverGameData.spectators and #serverGameData.spectators or 0
+		local spectatorLabel = serverSpectatorCount == 1 and "Spectator" or "Spectators"
+		Gui.textDisabled(serverName .. "   |   " .. Icon.Users .. "  " .. tostring(serverPlayerCount) .. " Players   |   " .. Icon.Eye .. "  " .. tostring(serverSpectatorCount) .. " " .. spectatorLabel)
+
+		if disconnectPending then
+			if Gui.buttonColored(LinearColor.new(0,0,0,0), "Are you sure?") then
+			end
+			Gui.sameLine()
+			if Gui.button("Yes##ConfirmDisconnect") then
+				Network.disconnectFromServer()
+				disconnectPending = false
+			end
+			Gui.sameLine()
+			if Gui.button("No##CancelDisconnect") then
+				disconnectPending = false
+			end
+		elseif Gui.button(Icon.SignOutAlt .. "  Disconnect") then
+			if disconnectConfirmation then
+				disconnectPending = true
+			else
+				Network.disconnectFromServer()
+			end
+		end
+
+		Gui.setItemTooltip("Quit to main menu")
 
 		Gui.separatorText("Quick Settings")
 
@@ -647,7 +693,7 @@ end
 		Gui.separatorText("Keybinds")
 		Gui.textDisabled("Type key names like F9, L, or SpaceBar. Mouse keybinds are not recognized.")
 
-		enableScreenshotKey = Gui.checkbox("Screenshot##EnableShot", enableScreenshotKey)
+		enableScreenshotKey = Gui.checkbox(Icon.Camera .. "  Screenshot", enableScreenshotKey)
 		if enableScreenshotKey ~= config.enableScreenshotKey then
 			config.enableScreenshotKey = enableScreenshotKey
 			if saveConfig then saveConfig() end
@@ -671,7 +717,31 @@ end
 			Gui.textDisabled("Invalid key")
 		end
 
-		enableFreecamKey = Gui.checkbox("Freecam##EnableFree", enableFreecamKey)
+		enableDisconnectKey = Gui.checkbox(Icon.SignOutAlt .. "  Disconnect", enableDisconnectKey)
+		Gui.sameLine()
+		if not enableDisconnectKey then
+			Gui.beginDisabled()
+		end
+		Gui.setNextItemWidth(200)
+		local newDisconnectKey = Gui.inputText("##DisconnectKeyInput", disconnectKeyStr)
+		if newDisconnectKey ~= disconnectKeyStr then
+			disconnectKeyStr = newDisconnectKey
+			config.disconnectKeyStr = disconnectKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if enableDisconnectKey ~= config.enableDisconnectKey then
+			config.enableDisconnectKey = enableDisconnectKey
+			if saveConfig then saveConfig() end
+		end
+		if not enableDisconnectKey then
+			Gui.endDisabled()
+		end
+		if parseKeyStr(disconnectKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid text")
+		end
+
+		enableFreecamKey = Gui.checkbox(Icon.CameraRetro .. "  Freecam##EnableFree", enableFreecamKey)
 		if enableFreecamKey ~= config.enableFreecamKey then
 			config.enableFreecamKey = enableFreecamKey
 			if saveConfig then saveConfig() end
@@ -695,7 +765,7 @@ end
 			Gui.textDisabled("Invalid key")
 		end
 
-		enableHandcamKey = Gui.checkbox("Handcam##EnableHand", enableHandcamKey)
+		enableHandcamKey = Gui.checkbox(Icon.User .. "  Handcam##EnableHand", enableHandcamKey)
 		if enableHandcamKey ~= config.enableHandcamKey then
 			config.enableHandcamKey = enableHandcamKey
 			if saveConfig then saveConfig() end
@@ -719,7 +789,7 @@ end
 			Gui.textDisabled("Invalid key")
 		end
 
-		enableEmoteToggleKey = Gui.checkbox("Toggle emote##EnableEmoteToggle", enableEmoteToggleKey)
+		enableEmoteToggleKey = Gui.checkbox(Icon.Smile .. "  Toggle emote##EnableEmoteToggle", enableEmoteToggleKey)
 		Gui.sameLine()
 		if not enableEmoteToggleKey then
 			Gui.beginDisabled()
@@ -758,7 +828,7 @@ end
 			Gui.endDisabled()
 		end
 
-		enableTeleportKey = Gui.checkbox("Teleport to location##EnableTeleport", enableTeleportKey)
+		enableTeleportKey = Gui.checkbox(Icon.LocationArrow .. "  Teleport to location##EnableTeleport", enableTeleportKey)
 		Gui.sameLine()
 		if not enableTeleportKey then
 			Gui.beginDisabled()
@@ -866,12 +936,17 @@ end
 			if saveConfig then saveConfig() end
 		end
 
-		local newShowCurrentServer = Gui.checkbox("Show current server", showCurrentServer)
-		if newShowCurrentServer ~= showCurrentServer then
-			showCurrentServer = newShowCurrentServer
-			config.showCurrentServer = showCurrentServer
+		local newDisconnectConfirmation = Gui.checkbox("Disconnect confirmation", disconnectConfirmation)
+		if newDisconnectConfirmation ~= disconnectConfirmation then
+			disconnectConfirmation = newDisconnectConfirmation
+			config.disconnectConfirmation = disconnectConfirmation
+			if not disconnectConfirmation then
+				disconnectPending = false
+			end
 			if saveConfig then saveConfig() end
 		end
+
+		Gui.setItemTooltip("When enabled, you will be asked to confirm before disconnecting from a server")
 
 		local tabTitleModeLabel = "Icon + name"
 		if tabTitleMode == "name" then
@@ -901,7 +976,22 @@ end
 
 		Gui.newLine()
 
+		Gui.separatorText("Owner")
+		Gui.textDisabled("Set yourself as the owner to appear first in player lists and handcam!")
+
+		local newOwnerName = Gui.inputText("Owner", ownerName)
+		if newOwnerName ~= ownerName then
+			ownerName = newOwnerName
+			config.ownerName = ownerName
+			config.ownerId = nil
+			config.currentPlayerId = nil
+			if saveConfig then saveConfig() end
+		end
+
+		Gui.newLine()
+
 		Gui.separatorText("Experimental")
+		Gui.textDisabled("Super secret settings")
 		local newCollisionEnabled = Gui.checkbox("Enable Collisions", collisionEnabled)
 		if newCollisionEnabled ~= collisionEnabled then
 			collisionEnabled = newCollisionEnabled
@@ -972,6 +1062,13 @@ end
 				end
 			end
 		end
+
+		local ownerNameLower = string.lower(ownerName)
+		table.sort(players, function(firstPlayer, secondPlayer)
+			local firstIsOwner = ownerNameLower ~= "" and string.lower(firstPlayer.name) == ownerNameLower
+			local secondIsOwner = ownerNameLower ~= "" and string.lower(secondPlayer.name) == ownerNameLower
+			return firstIsOwner and not secondIsOwner
+		end)
 
 		local gameData = getGameData()
 		local spectatorList = (gameData and gameData.spectators) and gameData.spectators or {}
@@ -1174,6 +1271,17 @@ function tick(dt)
 		local keyEnum = parseKeyStr(screenshotKeyStr)
 		if keyEnum and Input.getKeyDown(keyEnum) then
 			triggerScreenshot()
+		end
+	end
+
+	if enableDisconnectKey then
+		local keyEnum = parseKeyStr(disconnectKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) then
+			if disconnectConfirmation then
+				disconnectPending = true
+			else
+				Network.disconnectFromServer()
+			end
 		end
 	end
 
