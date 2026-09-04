@@ -1,7 +1,7 @@
 {
     "name": "august.procam",
     "displayName": "procam",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "fork of freecam",
     "main": "main.luau",
     "keywords": [
@@ -10,6 +10,5 @@
         "better"
     ],
     "author": "august",
-    "defaultKeybind": "X",
-    "url": "https://github.com/higuysimaugust/procam.git"
+    "defaultKeybind": "X"
 }

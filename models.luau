@@ -48,15 +48,54 @@ type PlacedText = {
     rainbowSpeed: number?,
 }
 
+type Light = {
+    position: Vec3,
+    intensity: number,
+    color: Vec3,
+    radius: number,
+    lightType: string, -- "Area" or "Player"
+    isPlayerLight: boolean?,
+    trackedPlayerId: number?,
+    name: string,
+}
+
 local modelFiles: { string } = {}
 local imageFiles: { string } = {}
 local placedModels: { Placed } = {}
 local placedImages: { Placed } = {}
 local placedTexts: { PlacedText } = {}
+local lights: { any } = {}
 local modelSpawnCount = 0
 local imageSpawnCount = 0
 local textSpawnCount = 0
+local lightSpawnCount = 0
 local status = " "
+local lightTabOpen = false
+local lightIndex = 1
+
+if config.hudSpeedEnabled == nil then config.hudSpeedEnabled = false end
+config.hudSpeedPlayerId = config.hudSpeedPlayerId or nil
+config.hudSpeedOffset = config.hudSpeedOffset or Vec3.new(0, 0, 400)
+config.hudSpeedFontSize = config.hudSpeedFontSize or 1
+local savedHudSpeedColor = config.hudSpeedColor
+if savedHudSpeedColor and savedHudSpeedColor.r and savedHudSpeedColor.g and savedHudSpeedColor.b then
+    config.hudSpeedColor = LinearColor.new(
+        savedHudSpeedColor.r,
+        savedHudSpeedColor.g,
+        savedHudSpeedColor.b,
+        savedHudSpeedColor.a or 1
+    )
+else
+    config.hudSpeedColor = LinearColor.new(1, 1, 1, 1)
+end
+local hudSpeedText: PlacedText? = nil
+local hudSpeedPreviousPosition: Vec3? = nil
+local hudSpeedPreviousPlayerId: any? = nil
+local hudSpeed = 0
+
+local function copyPosition(position: Vec3): Vec3
+    return Vec3.new(position.x, position.y, position.z)
+end
 
 local pendingSpawnModelFile: string? = nil
 local pendingSpawnModelDelay: number = 0
@@ -66,6 +105,57 @@ local pendingSpawnImageFile: string? = nil
 local pendingSpawnImageDelay: number = 0
 
 local fontCache: { [string]: { vertices: any, triangles: any, normals: any, uVs: any } } = {}
+
+local function drawCircle(position: Vec3, radius: number, direction: Vec3, colour: Vec3, lineWidth: number, lifetime: number)
+    local arbritaryVector = if direction ~= Vec3.upVector then Vec3.upVector else Vec3.rightVector
+    local upDirection = direction:cross(arbritaryVector):normalize()
+    local rightDirection = direction:cross(upDirection):normalize()
+    local previousPoint = nil
+    for theta = 0, math.pi * 2, math.pi / 64 do
+        local pointPos = upDirection * math.sin(theta) + rightDirection * math.cos(theta)
+        if previousPoint then
+            WorldDraw.drawLine(
+                position + (previousPoint * radius),
+                position + (pointPos * radius),
+                colour.x,
+                colour.y,
+                colour.z,
+                lineWidth,
+                lifetime
+            )
+        end
+        previousPoint = pointPos
+    end
+end
+
+local function fillCircle(
+    position: Vec3,
+    radius: number,
+    direction: Vec3 | nil,
+    colour: Vec3,
+    lineWidth: number,
+    lifetime: number
+)
+    if not direction then
+        direction = camera:getSmoothedRotation():getForwardVector()
+    end
+    assert(direction, "Direction should not be nil")
+    local arbritaryVector = if direction ~= Vec3.upVector then Vec3.upVector else Vec3.rightVector
+    local upDirection = direction:cross(arbritaryVector):normalize()
+    local rightDirection = direction:cross(upDirection):normalize()
+    for theta = 0, math.pi, math.pi / 64 do
+        local pointPos = upDirection * math.sin(theta) + rightDirection * math.cos(theta)
+        WorldDraw.drawLine(
+            position - (pointPos * radius),
+            position + (pointPos * radius),
+            colour.x,
+            colour.y,
+            colour.z,
+            lineWidth,
+            lifetime
+        )
+    end
+end
 
 local function HSVToRGB(h: number, s: number, v: number)
     local r, g, b
@@ -379,6 +469,87 @@ local function spawnTextObject(initialText: string)
     status = "Created " .. entry.name
 end
 
+local function destroyHudSpeedText()
+    if not hudSpeedText then return end
+    for _, item in ipairs(hudSpeedText.meshes) do
+        item.mesh:destroy()
+    end
+    hudSpeedText = nil
+end
+
+local function ensureHudSpeedText()
+    if hudSpeedText then return end
+    hudSpeedText = {
+        name = "HUD Speed",
+        text = "0.00 m/s",
+        position = inFrontOfCamera(),
+        euler = Vec3.zeroVector,
+        baseRotation = camera.rotation,
+        rotationReference = Quat.identity,
+        scale = Vec3.new(1, 1, 1),
+        brightness = 1,
+        color = config.hudSpeedColor,
+        visible = true,
+        is3D = false,
+        meshes = {},
+        isRainbow = false,
+        rainbowSpeed = 1.0,
+    }
+    rebuildTextMeshes(hudSpeedText)
+end
+
+local function getHudSpeedPlayer()
+    if not config.hudSpeedPlayerId then return nil end
+    local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
+    for i = 1, #sessions do
+        local session = sessions[i]
+        if session and session.getPlayerById then
+            local player = session:getPlayerById(config.hudSpeedPlayerId)
+            if player then return player end
+        end
+    end
+    return nil
+end
+
+local function updateHudSpeedText(dt: number)
+    if not config.hudSpeedEnabled then
+        destroyHudSpeedText()
+        hudSpeedPreviousPosition = nil
+        hudSpeedPreviousPlayerId = nil
+        return
+    end
+
+    ensureHudSpeedText()
+    local player = getHudSpeedPlayer()
+    if not player or not player.root or not player.root.position then
+        hudSpeed = 0
+        hudSpeedPreviousPosition = nil
+    elseif hudSpeedPreviousPlayerId ~= config.hudSpeedPlayerId then
+        hudSpeed = 0
+        hudSpeedPreviousPosition = copyPosition(player.root.position)
+        hudSpeedPreviousPlayerId = config.hudSpeedPlayerId
+    elseif hudSpeedPreviousPosition and dt > 0 then
+        hudSpeed = player.root.position:distance(hudSpeedPreviousPosition) / 100 / dt
+        hudSpeedPreviousPosition = copyPosition(player.root.position)
+    else
+        hudSpeedPreviousPosition = copyPosition(player.root.position)
+    end
+
+    local newText = string.format("%.2f m/s", hudSpeed)
+    if hudSpeedText.text ~= newText then
+        hudSpeedText.text = newText
+        rebuildTextMeshes(hudSpeedText)
+    end
+
+    hudSpeedText.scale = Vec3.new(config.hudSpeedFontSize, config.hudSpeedFontSize, config.hudSpeedFontSize)
+    hudSpeedText.color = config.hudSpeedColor
+    hudSpeedText.position = camera.position + camera.rotation:rotateVector(config.hudSpeedOffset)
+    hudSpeedText.baseRotation = camera.rotation
+    hudSpeedText.rotationReference = Quat.identity
+    hudSpeedText.euler = Vec3.zeroVector
+    updateTextMeshTransforms(hudSpeedText)
+end
+
 local function spawnModel(file: string, customScale: number?)
     local baseDir = file:match("^(.*)/[^/]+$") or ""
 
@@ -612,6 +783,101 @@ local function renderTextureTree(node: any, entry: Placed)
     end
 end
 
+local function spawnLight(lightType: string)
+    lightSpawnCount += 1
+    local light = WorldDraw.spawnPointLight(
+        inFrontOfCamera(),
+        10000,
+        Vec3.new(1, 1, 1),
+        1000
+    )
+    if light then
+        table.insert(lights, {
+            position = light.position,
+            intensity = light.intensity,
+            color = Vec3.new(1, 1, 1),
+            radius = light.radius,
+            lightType = lightType,
+            isPlayerLight = false,
+            trackedPlayerId = nil,
+            name = lightType .. " Light #" .. lightSpawnCount,
+            __internalLight = light,
+        })
+        lightIndex = #lights
+        status = "Spawned " .. lightType .. " Light"
+    else
+        status = "Failed to spawn light"
+    end
+end
+
+local function spawnPlayerLight(playerId: number)
+    lightSpawnCount += 1
+    local light = WorldDraw.spawnPointLight(
+        inFrontOfCamera(),
+        10000,
+        Vec3.new(1, 1, 1),
+        1000
+    )
+    if light then
+        table.insert(lights, {
+            position = light.position,
+            intensity = light.intensity,
+            color = Vec3.new(1, 1, 1),
+            radius = light.radius,
+            lightType = "Player",
+            isPlayerLight = true,
+            trackedPlayerId = playerId,
+            name = "Player Light #" .. lightSpawnCount,
+            __internalLight = light,
+        })
+        lightIndex = #lights
+        status = "Spawned Player Light"
+    else
+        status = "Failed to spawn light"
+    end
+end
+
+local function updateLightObjects()
+    for i, entry in ipairs(lights) do
+        if entry.__internalLight then
+            -- Update position for player lights
+            if entry.isPlayerLight and entry.trackedPlayerId then
+                local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
+                local targetPlayer = nil
+                for j = 1, #sessions do
+                    local session = sessions[j]
+                    if session and session.getPlayerById then
+                        targetPlayer = session:getPlayerById(entry.trackedPlayerId)
+                        if targetPlayer then break end
+                    end
+                end
+                
+                if targetPlayer and targetPlayer.root and targetPlayer.root.position then
+                    -- Position light between player and camera
+                    local playerPos = targetPlayer.root.position
+                    local camPos = camera.position
+                    entry.position = playerPos + (camPos - playerPos) * 0.3
+                end
+            end
+            
+            entry.__internalLight.position = entry.position
+            entry.__internalLight.intensity = entry.intensity
+            entry.__internalLight.color = entry.color
+            entry.__internalLight.radius = entry.radius
+        end
+    end
+end
+
+local function destroyLight(index: number)
+    if lights[index] and lights[index].__internalLight then
+        lights[index].__internalLight:destroy()
+    end
+    table.remove(lights, index)
+    if lightIndex > #lights and lightIndex > 1 then
+        lightIndex -= 1
+    end
+end
+
 local function getPlayersList()
     local players = {}
     local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
@@ -630,6 +896,166 @@ local function getPlayersList()
         end
     end
     return players
+end
+
+local function onLightsGui()
+    if status ~= "" then Gui.textDisabled(status) end
+
+    lightTabOpen = Gui.checkbox("Show Light Visualizations", lightTabOpen)
+
+    if Gui.button(Icon.Lightbulb .. "  Spawn Light") then
+        spawnLight("Area")
+    end
+    Gui.sameLine()
+    if Gui.buttonColored(LinearColor.new(1,0,0,1), Icon.Trash .. "  Remove All") then
+        for i = #lights, 1, -1 do
+            destroyLight(i)
+        end
+        status = "Cleared all lights"
+    end
+
+    Gui.separatorText("Spawn Player Light")
+    Gui.textDisabled("Spawn lights that track a player")
+    local players = getPlayersList() or {}
+    if #players == 0 then
+        Gui.textDisabled("No players available")
+    else
+        if Gui.beginListBox("##PlayerListForLight") then
+            for _, p in ipairs(players) do
+                if Gui.selectable(p.name, false) then
+                    spawnPlayerLight(p.id)
+                end
+            end
+        end
+        Gui.endListBox()
+    end
+
+    Gui.separatorText("Lights (" .. #lights .. ")")
+
+    if Gui.beginListBox("##LightsList") then
+        for i = 1, #lights do
+            if Gui.selectable(lights[i].name, lightIndex == i) then
+                lightIndex = i
+            end
+        end
+    end
+    Gui.endListBox()
+
+    if lightIndex >= 1 and lightIndex <= #lights then
+        local light = lights[lightIndex]
+        Gui.newLine()
+        Gui.separatorText("Edit")
+
+        light.name = Gui.inputText("Light Name", light.name)
+        
+        if not light.isPlayerLight then
+            Gui.separatorText("Transform")
+            light.position = Gui.dragFloat3("Position", light.position, 1, -1000000, 1000000)
+            Gui.sameLine()
+            if Gui.smallButton("To Camera") then
+                light.position = inFrontOfCamera()
+            end
+        else
+            Gui.separatorText("Player")
+            local selectedPlayer = nil
+            for _, p in ipairs(players) do
+                if p.id == light.trackedPlayerId then
+                    selectedPlayer = p
+                    break
+                end
+            end
+            if selectedPlayer then
+                Gui.text(selectedPlayer.name)
+            else
+                Gui.textDisabled("Player not found")
+            end
+        end
+
+        Gui.separatorText("Properties")
+        light.intensity = Gui.dragFloat("Intensity", light.intensity, 100, 0, 1000000)
+        light.radius = Gui.dragFloat("Radius", light.radius, 10, 0, 50000)
+        
+        local newColor = Gui.colorEdit("Color##light_" .. lightIndex, LinearColor.new(light.color.x, light.color.y, light.color.z, 1))
+        light.color = Vec3.new(newColor.r, newColor.g, newColor.b)
+
+        Gui.separatorText("Actions")
+        if Gui.button(Icon.Copy .. "  Duplicate") then
+            lightSpawnCount += 1
+            local newLight = WorldDraw.spawnPointLight(
+                light.position,
+                light.intensity,
+                light.color,
+                light.radius
+            )
+            if newLight then
+                table.insert(lights, {
+                    position = newLight.position,
+                    intensity = newLight.intensity,
+                    color = light.color,
+                    radius = newLight.radius,
+                    lightType = light.lightType,
+                    isPlayerLight = light.isPlayerLight,
+                    trackedPlayerId = light.trackedPlayerId,
+                    name = light.name .. " (copy)",
+                    __internalLight = newLight,
+                })
+                lightIndex = #lights
+            end
+        end
+
+        Gui.sameLine()
+        if Gui.buttonColored(LinearColor.new(1,0,0,1), Icon.Trash .. "  Delete") then
+            destroyLight(lightIndex)
+        end
+    end
+end
+
+local function onHudGui()
+    local newEnabled = Gui.checkbox("Show Player Speed", config.hudSpeedEnabled)
+    if newEnabled ~= config.hudSpeedEnabled then
+        config.hudSpeedEnabled = newEnabled
+        hudSpeedPreviousPosition = nil
+        hudSpeedPreviousPlayerId = nil
+        if saveConfig then saveConfig() end
+    end
+
+    Gui.separatorText("Player")
+    local players = getPlayersList()
+    if Gui.beginListBox("##HudSpeedPlayers") then
+        for _, player in ipairs(players) do
+            local isSelected = config.hudSpeedPlayerId == player.id
+            if Gui.selectable(player.name, isSelected) then
+                config.hudSpeedPlayerId = player.id
+                hudSpeedPreviousPosition = nil
+                hudSpeedPreviousPlayerId = nil
+                if saveConfig then saveConfig() end
+            end
+        end
+        Gui.endListBox()
+    end
+
+    if not config.hudSpeedPlayerId then
+        Gui.textDisabled("Select a player to measure")
+    end
+
+    local newOffset = Gui.dragFloat3("HUD Offset", config.hudSpeedOffset, 1, -1000, 1000)
+    if newOffset ~= config.hudSpeedOffset then
+        config.hudSpeedOffset = newOffset
+        if saveConfig then saveConfig() end
+    end
+
+    local newFontSize = Gui.sliderFloat("Font Size", config.hudSpeedFontSize, 0.1, 10)
+    if newFontSize ~= config.hudSpeedFontSize then
+        config.hudSpeedFontSize = newFontSize
+        if saveConfig then saveConfig() end
+    end
+
+    local newColor = Gui.colorEdit("Font Color", config.hudSpeedColor)
+    if newColor ~= config.hudSpeedColor then
+        config.hudSpeedColor = newColor
+        if saveConfig then saveConfig() end
+    end
+    Gui.text(string.format("Current speed: %.2f m/s", hudSpeed))
 end
 
 local function renderPlacedItems(placedList: {Placed})
@@ -1142,6 +1568,40 @@ function tick(dt: number)
         return math.clamp(size, 1, 60)
     end
 
+    -- Update and render lights
+    updateLightObjects()
+    WorldDraw.clear()
+    
+    if lightTabOpen then
+        local gravityUp = gravity.upDirection ~= Vec3.zeroVector and gravity.upDirection or Vec3.upVector
+        local gravityUpRotation = gravity.upRotation or Vec3.forwardVector
+        
+        for i = 1, #lights do
+            local light = lights[i]
+            fillCircle(
+                light.position,
+                2 * (Vec3.distance(light.position, camera.position) / 100),
+                nil,
+                light.color,
+                0.3 * (Vec3.distance(light.position, camera.position) / 100),
+                0
+            )
+            if lightIndex == i then
+                fillCircle(
+                    light.position + (camera.position - light.position):normalize(),
+                    1 * (Vec3.distance(light.position, camera.position) / 100),
+                    nil,
+                    Vec3.zeroVector,
+                    0.15 * (Vec3.distance(light.position, camera.position) / 100),
+                    0
+                )
+            end
+            drawCircle(light.position, light.radius, gravityUp, light.color, 1, 0)
+            drawCircle(light.position, light.radius, gravityUpRotation ~= Vec3.forwardVector and gravityUpRotation:getForwardVector() or Vec3.upVector, light.color, 1, 0)
+            drawCircle(light.position, light.radius, Vec3.rightVector, light.color, 1, 0)
+        end
+    end
+
     for _, entry in ipairs(placedTexts) do
         if entry.isRainbow and entry.visible and #entry.meshes > 0 then
             local speed = entry.rainbowSpeed or 1.0
@@ -1276,10 +1736,17 @@ function tick(dt: number)
     end
 end
 
+function updateHud(dt: number)
+    updateHudSpeedText(dt)
+end
+
 return {
     onModelsGui = onModelsGui,
     onImagesGui = onImagesGui,
     onTextGui = onTextGui,
+    onHudGui = onHudGui,
+    onLightsGui = onLightsGui,
     onTransitionBegin = onTransitionBegin,
+    updateHud = updateHud,
     tick = tick,
 }

@@ -403,7 +403,7 @@ local function applySettingsChange(changed)
             camera.fieldOfView = config.fov
         end
         if viewpointMode or thirdPersonMode or manualOrbitMode or cameraInHand then
-                applyCameraSmoothness()
+                applyCameraSmoothness(viewpointMode)
         else
             disableCameraSmoothness()
         end
@@ -415,9 +415,9 @@ local function applySettingsChange(changed)
     queueConfigSave()
 end
 
-local function applyCameraSmoothness()
+local function applyCameraSmoothness(lockPosition)
     if camera then
-        camera.positionSmoothing = config.cameraSmoothness
+        camera.positionSmoothing = lockPosition and 0 or config.cameraSmoothness
         camera.rotationSmoothing = config.cameraSmoothness
     end
 end
@@ -440,7 +440,7 @@ end
 
 local function setViewpointMode(player)
     if not player or not player.head then return end
-    applyCameraSmoothness()
+    applyCameraSmoothness(true)
     camera.nearClippingPlane = config.nearClip
     camera.fieldOfView = config.fov
     camera.hideNearestHead = config.hideHead
@@ -1897,7 +1897,7 @@ function Axis.tick(dt)
             end
         end
 
-        applyCameraSmoothness()
+        applyCameraSmoothness(true)
         camera.hideNearestHead = config.hideHead
         camera.position = currentPlayer.head.position
         camera.rotation = currentPlayer.head.rotation

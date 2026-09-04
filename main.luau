@@ -64,16 +64,13 @@ if enableTeleportKey == nil then
 		if enableTeleportKey == nil then enableTeleportKey = true end
 end
 local teleportKeyStr = config.teleportKeyStr or "PageUp"
-local teleportRealm = config.teleportRealm or "Orion"
+local teleportMapType = config.teleportMapType or "Orion"
 local teleportName = config.teleportName or "Club District"
 
 local enableDisconnectKey = config.enableDisconnectKey ~= nil and config.enableDisconnectKey or false
 local disconnectKeyStr = config.disconnectKeyStr or "R"
-local disconnectConfirmation = config.disconnectConfirmation
-if disconnectConfirmation == nil then disconnectConfirmation = true end
 local ownerName = config.ownerName or "Playername"
 config.ownerName = ownerName
-local disconnectPending = false
 
 local function parseKeyStr(keyStr: string)
 	if not keyStr or keyStr == "" then
@@ -131,14 +128,29 @@ type CameraTransform = {
 local startLocations: { [string]: { [string]: CameraTransform } } = {
     Orion = {
         ["Driftball District"] = { position = Vec3.new(0, -3000, -27000), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
-        ["4v4 West"] = { position = Vec3.new(-14160.8, 27898.6, -23246.5), rotation = Quat.fromEuler(28.5, -4.9, -89.6), fieldOfView = 90.0 },
+        ["Sparks Supplies"] = { position = Vec3.new(-3616.6, 2623.2, -28411.3), rotation = Quat.fromEuler(0.0, -0.8, 179.7), fieldOfView = 90.0 },
+		["Mainframe"] = { position = Vec3.new(-786.7, 2476.6, -29148.3), rotation = Quat.fromEuler(0.0, -2.1, 31.3), fieldOfView = 80.0 },
+		["Plaza West"] = { position = Vec3.new(2752.6, 18540.0, -29478.3), rotation = Quat.fromEuler(-0.0, -2.0, -0.7), fieldOfView = 80.0 },
+		["Plaza East"] = { position = Vec3.new(-2629.0, 18576.3, -29338.3), rotation = Quat.fromEuler(-0.0, -2.5, -179.5), fieldOfView = 80.0 },
+		["Prime"] = { position = Vec3.new(5.7, 25270.0, -27899.1), rotation = Quat.fromEuler(0.0, -0.9, 90.4), fieldOfView = 80.0 },
+		["4v4 West"] = { position = Vec3.new(-14160.8, 27898.6, -23246.5), rotation = Quat.fromEuler(28.5, -4.9, -89.6), fieldOfView = 90.0 },
         ["4v4 East"] = { position = Vec3.new(13688.8, 28096.6, -23525.5), rotation = Quat.fromEuler(-30.1, -4.9, -89.6), fieldOfView = 90.0 },
-        ["Driftball Fieldhouse"] = { position = Vec3.new(46.5, 22785.3, -29127.5), rotation = Quat.fromEuler(0.0, -5.6, 91.1), fieldOfView = 90.0 },
+        ["Fieldhouse"] = { position = Vec3.new(46.5, 22785.3, -29127.5), rotation = Quat.fromEuler(0.0, -5.6, 91.1), fieldOfView = 90.0 },
         ["Club District"] = { position = Vec3.new(24000, 1000, 14000), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
-        ["Parkour District"] = { position = Vec3.new(-24150, 1457, 14100), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
+        ["Sparks Supplies"] = { position = Vec3.new(22868.9, 6266.6, 17292.1), rotation = Quat.fromEuler(179.3, 60.1, 179.2), fieldOfView = 90.0 },
+		["Mainframe"] = { position = Vec3.new(25653.1, 2461.7, 13850.4), rotation = Quat.fromEuler(137.6, 49.9, 129.0), fieldOfView = 75.0 },
+		["Volleyfall"] = { position = Vec3.new(22496.1, 12093.4, 18064.3), rotation = Quat.fromEuler(129.4, -37.8, 63.2), fieldOfView = 75.0 },
+		["Z-Drift Plaza"] = { position = Vec3.new(6448.4, 6560.7, 3734.8), rotation = Quat.fromEuler(-120.3, 0.5, -89.4), fieldOfView = 90.0 },
+		["Alpha"] = { position = Vec3.new(8734.7, -5412.5, -2669.4), rotation = Quat.fromEuler(-60.2, 0.7, -90.5), fieldOfView = 90.0 },
+		["Beta"] = { position = Vec3.new(7571.8, -5406.4, 4377.9), rotation = Quat.fromEuler(-120.3, -0.6, -90.2), fieldOfView = 90.0 },
+		["Gamma"] = { position = Vec3.new(2049.0, -5450.9, 8889.3), rotation = Quat.fromEuler(179.7, -1.6, -90.4), fieldOfView = 90.0 },
+		["Cargo Bay"] = { position = Vec3.new(133.7, 8087.4, -7414.6), rotation = Quat.fromEuler(0.5, -2.5, -90.2), fieldOfView = 90.0 },
+		["Z-Draft"] = { position = Vec3.new(-6797.9, 8024.8, 4058.9), rotation = Quat.fromEuler(120.0, -2.0, -89.5), fieldOfView = 90.0 },
+		["Parkour District"] = { position = Vec3.new(-24150, 1457, 14100), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
         ["Scraprun"] = { position = Vec3.new(-16857.9, 7397.9, 29016.7), rotation = Quat.fromEuler(-150.0, 1.4, 91.2), fieldOfView = 90.0 },
         ["DRAFT District"] = { position = Vec3.new(186.2, 1769.9, 28125.7), rotation = Quat.fromEuler(-179.3, 1.4, 91.2), fieldOfView = 90.0 },
-        ["The Spine"] = { position = Vec3.new(-0.0, -0.0, 0.0), rotation = Quat.fromEuler(0.0, -0.0, 0.0), fieldOfView = 90.0 },
+        ["DRAFT Underground"] = { position = Vec3.new(83.3, 3755.6, 29812.3), rotation = Quat.fromEuler(180.0, 3.0, 91.3), fieldOfView = 75.0 },
+		["The Spine"] = { position = Vec3.new(-0.0, -0.0, 0.0), rotation = Quat.fromEuler(0.0, -0.0, 0.0), fieldOfView = 90.0 },
         ["Driftblitz"] = { position = Vec3.new(27009.3, 5353.3, -211.0), rotation = Quat.fromEuler(90.0, -0.4, 85.5), fieldOfView = 90.0 },
         ["Baseball"] = { position = Vec3.new(13899.7, 1254.5, 24347.8), rotation = Quat.fromEuler(149.9, -0.4, 85.5), fieldOfView = 90.0 },
         ["Club Fieldhouse"] = { position = Vec3.new(23232.2, 28749.7, 16914.5), rotation = Quat.fromEuler(-179.5, -53.9, -0.5), fieldOfView = 90.0 },
@@ -164,20 +176,28 @@ local startLocations: { [string]: { [string]: CameraTransform } } = {
 local orionLocationGroups = {
     {
         title = "Driftball District",
-        labels = { "Driftball District", "Fieldhouse", "4v4 West", "4v4 East" },
+        labels = { "Driftball District", "Sparks Supplies", "Mainframe", "Plaza West", "Plaza East", "Prime", "4v4 West", "4v4 East" },
     },
-    {
-        title = "Club District",
-        labels = { "Club District", "Driftblitz", "Baseball", "Fieldhouse (Club)" },
-    },
+    
     {
         title = "Parkour District",
-        labels = { "Parkour District", "Scraprun", "DRAFT District" },
+        labels = { "Parkour District", "Scraprun", "DRAFT District", "DRAFT Underground" },
     },
-    {
+	{
         title = "Orion",
-        labels = { "The Spine", "Space" },
+        labels = { "Space" },
+    }
+}
+
+local orionLocationGroups2 = {
+    {
+        title = "Club District",
+        labels = { "Club District", "Sparks Supplies", "Mainframe", "Volleyfall", "Fieldhouse", "Baseball", "Driftblitz" },
     },
+	{
+		title = "Z-Drift",
+		labels = { "Z-Drift Plaza", "Cargo Bay", "Alpha", "Beta", "Gamma", "Z-Draft" }
+	}
 }
 
 local aresLocationGroups = {
@@ -199,44 +219,66 @@ local aresLocationGroups = {
     },
 }
 
-local function drawLocationCombo(comboId, selectedRealm, selectedName)
-	if Gui.beginCombo(comboId, selectedName) then
-		local function drawRealm(realmName, groups)
-			if Gui.collapsingHeader(realmName) then
-				local firstGroup = true
-				for _, group in ipairs(groups) do
-					if not firstGroup then
-						Gui.separator()
-					end
-					firstGroup = false
+local function detectMapType()
+    if not SpectatorGamemodes or not SpectatorGamemodes.listGamemodeIds then
+        return "Orion"
+    end
 
-					for _, locationName in ipairs(group.labels) do
-						if startLocations[realmName][locationName] and Gui.selectable(locationName, selectedRealm == realmName and selectedName == locationName) then
-							selectedRealm = realmName
-							selectedName = locationName
-						end
-					end
-				end
-			end
-		end
+    local gamemodes = SpectatorGamemodes.listGamemodeIds()
+    if #gamemodes == 0 then
+        return "Shuttle"
+    end
 
-		drawRealm("Orion", orionLocationGroups)
-		drawRealm("Ares", aresLocationGroups)
-		if Gui.collapsingHeader("Shuttle##teleport") then
-			if startLocations.Shuttle and startLocations.Shuttle.Shuttle and Gui.selectable("Shuttle", selectedRealm == "Shuttle" and selectedName == "Shuttle") then
-				selectedRealm = "Shuttle"
-				selectedName = "Shuttle"
-			end
-		end
+    for _, gamemode in ipairs(gamemodes) do
+        if gamemode:find("scraprun") or gamemode:find("TKB_") then
+            return "Orion"
+        elseif gamemode:find("Gamma 0") or gamemode:find("Beta 0") or gamemode:find("Alpha 0") then
+            return "Ares"
+        end
+    end
 
-		Gui.endCombo()
-	end
-	return selectedRealm, selectedName
+    return "Orion"
 end
 
-local defaultSpawnRealm = config.defaultSpawnRealm or "Orion"
+local function drawLocationCombo(comboId, selectedMapType, selectedName)
+    if Gui.beginCombo(comboId, selectedName) then
+        local function drawMapType(MapTypeName, groups)
+            if Gui.collapsingHeader(MapTypeName) then
+                local firstGroup = true
+                for _, group in ipairs(groups) do
+                    if not firstGroup then
+                        Gui.separator()
+                    end
+                    firstGroup = false
+
+                    for _, locationName in ipairs(group.labels) do
+                        if startLocations[MapTypeName][locationName] and Gui.selectable(locationName, selectedMapType == MapTypeName and selectedName == locationName) then
+                            selectedMapType = MapTypeName
+                            selectedName = locationName
+                        end
+                    end
+                end
+            end
+        end
+
+        drawMapType("Orion", orionLocationGroups)
+        drawMapType("Orion", orionLocationGroups2)
+        drawMapType("Ares", aresLocationGroups)
+        if Gui.collapsingHeader("Shuttle##teleport") then
+            if startLocations.Shuttle and startLocations.Shuttle.Shuttle and Gui.selectable("Shuttle", selectedMapType == "Shuttle" and selectedName == "Shuttle") then
+                selectedMapType = "Shuttle"
+                selectedName = "Shuttle"
+            end
+        end
+
+        Gui.endCombo()
+    end
+    return selectedMapType, selectedName
+end
+
+local defaultSpawnMapType = config.defaultSpawnMapType or "Orion"
 local defaultSpawnName = config.defaultSpawnName or "Driftball District"
-local startLocation = startLocations[defaultSpawnRealm] and startLocations[defaultSpawnRealm][defaultSpawnName]
+local startLocation = startLocations[defaultSpawnMapType] and startLocations[defaultSpawnMapType][defaultSpawnName]
 if not startLocation then
     startLocation = startLocations.Orion["Driftball District"]
 end
@@ -249,6 +291,8 @@ local followSpectatorEnabled = false
 local selectedSpectatorName = ""
 local spectatorSearchText = ""
 local spectatorList = {}
+local debugLocationName = "New Location"
+local showLocationWriter = config.showLocationWriter or false
 
 local emoteCycling = config.emoteCycling ~= nil and config.emoteCycling or false
 local lastEmoteCycleTime = 0
@@ -277,6 +321,12 @@ local function goToLocation(transform: CameraTransform)
 	snapToGravity()
 	pendingGravitySnap = true
 	ntimer = 0
+end
+
+local function formatLocationLine(locationName: string, pos: Vec3, rot: Quat, fov: number): string
+	local euler = rot:euler()
+	return string.format('		["%s"] = { position = Vec3.new(%.1f, %.1f, %.1f), rotation = Quat.fromEuler(%.1f, %.1f, %.1f), fieldOfView = %.1f },',
+		locationName, pos.x, pos.y, pos.z, euler.x, euler.y, euler.z, fov)
 end
 
 local function getTabTitle(icon: string, name: string)
@@ -314,10 +364,6 @@ do
 end
 
 function onGui()
-	Gui.text("Procam")
-
-	Gui.sameLine()
-
 	local activeCam = "Freecam"
 	if Axis.isEnabled then
 		activeCam = "Handcam"
@@ -326,97 +372,31 @@ function onGui()
 		activeCam = "Spectator Follow"
 	end
 
-	Gui.textDisabled("Using " .. activeCam)
+	Gui.text("Using " .. activeCam)
 
-	Gui.beginTabBar("FreecamTabs")
-
-	if Gui.beginTabItem(getTabTitle(Icon.Home, "Home")) then
-		if Gui.collapsingHeader("Emotes") then	
-			Emotes.onGui()
-
-			local currentEmoteId = camera:getEmote() or 0
-
-			Gui.beginChild("homeCurrentEmote", 180, 70, true)
-			Gui.text("Current Emote")
-
-			local labels = emoteLabels[currentEmoteId] or { "None" }
-			Gui.text(labels[currentEmoteFrame] or labels[1])
-
-			Gui.endChild()
-			Gui.sameLine()
-
-			Gui.beginChild("homeEmoteCycling", 180, 70, true)
-			Gui.text("Emote Cycling")
-			if emoteCycling then
-				local remaining = math.max(0, emoteCycleInterval - (timer - lastEmoteCycleTime))
-				Gui.text(Icon.Sync .. "  " .. string.format("%.1f", remaining))
-			else
-				Gui.text("Disabled")
-			end
-			Gui.endChild()
-			Gui.newLine()
-
-			local newEmoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
-			if newEmoteCycling ~= emoteCycling then
-				emoteCycling = newEmoteCycling
-				config.emoteCycling = emoteCycling
-				if saveConfig then saveConfig() end
-			end
-			Gui.setItemTooltip("Enable cycling through emotes")
-
-			if emoteCycling then
-				Gui.sameLine()
-                local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
-				if newEmoteCycleInterval ~= emoteCycleInterval then
-					emoteCycleInterval = newEmoteCycleInterval
-					config.emoteCycleInterval = emoteCycleInterval
-					if saveConfig then saveConfig() end
-				end
-            end
-		end
-
-		Gui.separatorText("Server")
-		local serverPlayerCount = 0
-		local serverSessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
-		for _, session in ipairs(serverSessions) do
-			if session and session.players then
-				for _, playerInfo in ipairs(session.players) do
-					if playerInfo and playerInfo.playerId then
-						local player = session.getPlayerById and session:getPlayerById(playerInfo.playerId) or playerInfo
-						if player and player.playerName then
-							serverPlayerCount += 1
-						end
+	local serverPlayerCount = 0
+	local serverSessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
+	for _, session in ipairs(serverSessions) do
+		if session and session.players then
+			for _, playerInfo in ipairs(session.players) do
+				if playerInfo and playerInfo.playerId then
+					local player = session.getPlayerById and session:getPlayerById(playerInfo.playerId) or playerInfo
+					if player and player.playerName then
+						serverPlayerCount += 1
 					end
 				end
 			end
 		end
-		local serverGameData = getGameData and getGameData()
-		local serverSpectatorCount = serverGameData and serverGameData.spectators and #serverGameData.spectators or 0
-		local spectatorLabel = serverSpectatorCount == 1 and "Spectator" or "Spectators"
-		Gui.textDisabled(serverName .. "   |   " .. Icon.Users .. "  " .. tostring(serverPlayerCount) .. " Players   |   " .. Icon.Eye .. "  " .. tostring(serverSpectatorCount) .. " " .. spectatorLabel)
+	end
+	local serverGameData = getGameData and getGameData()
+	local serverSpectatorCount = serverGameData and serverGameData.spectators and #serverGameData.spectators or 0
+	local spectatorLabel = serverSpectatorCount == 1 and "Spectator" or "Spectators"
+	Gui.sameLine()
+	Gui.textDisabled(serverName .. "   |   " .. Icon.Users .. "  " .. tostring(serverPlayerCount) .. " Players   |   " .. Icon.Eye .. "  " .. tostring(serverSpectatorCount) .. " " .. spectatorLabel)
 
-		if disconnectPending then
-			if Gui.buttonColored(LinearColor.new(0,0,0,0), "Are you sure?") then
-			end
-			Gui.sameLine()
-			if Gui.button("Yes##ConfirmDisconnect") then
-				Network.disconnectFromServer()
-				disconnectPending = false
-			end
-			Gui.sameLine()
-			if Gui.button("No##CancelDisconnect") then
-				disconnectPending = false
-			end
-		elseif Gui.button(Icon.SignOutAlt .. "  Disconnect") then
-			if disconnectConfirmation then
-				disconnectPending = true
-			else
-				Network.disconnectFromServer()
-			end
-		end
+	Gui.beginTabBar("FreecamTabs")
 
-		Gui.setItemTooltip("Quit to main menu")
-
+	if Gui.beginTabItem(getTabTitle(Icon.Home, "Home")) then
 		Gui.separatorText("Quick Settings")
 
 		local newShowNameTags = Gui.checkbox("Show name tags", camera.showNameTags)
@@ -431,6 +411,7 @@ function onGui()
 			config.alignToGravity = newAlignToGravity
 			if saveConfig then saveConfig() end
 		end
+		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
 		local newLocalMovementAxes = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
 		if newLocalMovementAxes ~= Inputs.localMovementAxesDefault then
 			Inputs.localMovementAxesDefault = newLocalMovementAxes
@@ -460,6 +441,25 @@ function onGui()
 			if saveConfig then saveConfig() end
 		end
 		Gui.setItemTooltip("How fast the speed adjustment buttons affect the camera speed")
+
+		if not Inputs.smoothing then
+			Gui.beginDisabled()
+		end
+		local newLookSmoothness = Gui.sliderFloat("Smoothness", Inputs.lookSmoothness, 0, 1)
+		if not Inputs.smoothing then
+			Gui.endDisabled()
+		end
+		if newSmoothing ~= Inputs.smoothing then
+			Inputs.smoothing = newSmoothing
+			config.smoothing = newSmoothing
+			Util.setSmoothing(Inputs.smoothing, Inputs)
+			if saveConfig then saveConfig() end
+		end
+		if newLookSmoothness ~= Inputs.lookSmoothness then
+			Inputs.lookSmoothness = newLookSmoothness
+			config.lookSmoothness = newLookSmoothness
+			if saveConfig then saveConfig() end
+		end
 		
 		Gui.separatorText("Camera Controls")
 
@@ -475,6 +475,49 @@ function onGui()
 		camera.fieldOfView = Gui.sliderFloat("Field of View", camera.fieldOfView, Inputs.minFov, Inputs.maxFov)
 
 		Gui.newLine()
+
+		if Gui.collapsingHeader("Emotes") then	
+			Emotes.onGui()
+
+			local currentEmoteId = camera:getEmote() or 0
+
+			Gui.beginChild("homeCurrentEmote", 180, 70, true)
+			Gui.text("Current Emote")
+
+			local labels = emoteLabels[currentEmoteId] or { "None" }
+			Gui.text(labels[currentEmoteFrame] or labels[1])
+
+			Gui.endChild()
+			Gui.sameLine()
+
+			Gui.beginChild("homeEmoteCycling", 180, 70, true)
+			Gui.text("Emote Cycling")
+			if emoteCycling then
+				local remaining = math.max(0, emoteCycleInterval - (timer - lastEmoteCycleTime))
+				Gui.text(Icon.Sync .. "  " .. string.format("%.1f", remaining))
+			else
+				Gui.text("Disabled")
+			end
+			Gui.endChild()
+
+			local newEmoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
+			if newEmoteCycling ~= emoteCycling then
+				emoteCycling = newEmoteCycling
+				config.emoteCycling = emoteCycling
+				if saveConfig then saveConfig() end
+			end
+			Gui.setItemTooltip("Enable cycling through emotes")
+
+			if emoteCycling then
+				Gui.sameLine()
+                local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
+				if newEmoteCycleInterval ~= emoteCycleInterval then
+					emoteCycleInterval = newEmoteCycleInterval
+					config.emoteCycleInterval = emoteCycleInterval
+					if saveConfig then saveConfig() end
+				end
+            end
+		end
 
 				if Gui.collapsingHeader("Screenshots") then
 			local presetMap = {
@@ -556,7 +599,6 @@ function onGui()
 			Gui.textDisabled("in pixels")
 			local newWidth = math.floor(newRes.x + 0.5)
 			local newHeight = math.clamp(math.floor(newRes.y + 0.5), 100, 4320)
-
 			if newWidth ~= screenshotWidth or newHeight ~= screenshotHeight then
 				screenshotWidth = newWidth
 				screenshotHeight = newHeight
@@ -577,106 +619,139 @@ function onGui()
 			end
 		end
 
-
 		if Gui.collapsingHeader("Locations") then
+			local currentMapType = detectMapType()
 
-		if Gui.beginCombo("##SpawnLocationCombo", defaultSpawnName) then
-	if Gui.collapsingHeader("Orion") then
-	local firstGroup = true
+			if Gui.beginCombo("##SpawnLocationCombo", defaultSpawnName) then
+				if Gui.collapsingHeader("Orion") then
+					local firstGroup = true
+					local combinedOrion = { orionLocationGroups, orionLocationGroups2 }
+					for _, groups in ipairs(combinedOrion) do
+						for _, group in ipairs(groups) do
+							if not firstGroup then
+								Gui.separator()
+							end
+							firstGroup = false
 
-	for _, group in ipairs(orionLocationGroups) do
-		if not firstGroup then
-			Gui.separator()
-		end
-		firstGroup = false
-
-		for _, locName in ipairs(group.labels) do
-			if startLocations.Orion[locName] then
-				if Gui.selectable(locName, defaultSpawnName == locName) then
-					defaultSpawnRealm = "Orion"
-					defaultSpawnName = locName
-					config.defaultSpawnRealm = defaultSpawnRealm
-					config.defaultSpawnName = defaultSpawnName
-					if saveConfig then saveConfig() end
-				end
-			end
-		end
-	end
-end
-
-if Gui.collapsingHeader("Ares") then
-	local firstGroup = true
-
-	for _, group in ipairs(aresLocationGroups) do
-		if not firstGroup then
-			Gui.separator()
-		end
-		firstGroup = false
-
-		for _, locName in ipairs(group.labels) do
-			if startLocations.Ares[locName] then
-				if Gui.selectable(locName, defaultSpawnName == locName) then
-					defaultSpawnRealm = "Ares"
-					defaultSpawnName = locName
-					config.defaultSpawnRealm = defaultSpawnRealm
-					config.defaultSpawnName = defaultSpawnName
-					if saveConfig then saveConfig() end
-				end
-			end
-		end
-	end
-end
-
-	if Gui.collapsingHeader("Shuttle##g") then
-		if startLocations.Shuttle and startLocations.Shuttle["Shuttle"] then
-			if Gui.selectable("Shuttle##tp", defaultSpawnName == "Shuttle") then
-				defaultSpawnRealm = "Shuttle"
-				defaultSpawnName = "Shuttle"
-				config.defaultSpawnRealm = defaultSpawnRealm
-				config.defaultSpawnName = defaultSpawnName
-				if saveConfig then saveConfig() end
-			end
-		end
-	end
-
-	Gui.endCombo()
-end
-
-		Gui.sameLine()
-		Gui.text("Default Spawn")
-
-			Gui.beginHorizontal("location_columns")
-
-			Gui.beginChild("orion_column", 300, 300, true)
-			for _, group in ipairs(orionLocationGroups) do
-				if _ > 1 then
-					Gui.separator()
-				end
-				for _, label in ipairs(group.labels) do
-					local location = startLocations.Orion[label]
-					if location and Gui.selectable(label, false) then
-						goToLocation(location)
+							for _, locName in ipairs(group.labels) do
+								if startLocations.Orion[locName] then
+									if Gui.selectable(locName, defaultSpawnName == locName) then
+										defaultSpawnMapType = "Orion"
+										defaultSpawnName = locName
+										config.defaultSpawnMapType = defaultSpawnMapType
+										config.defaultSpawnName = defaultSpawnName
+										if saveConfig then saveConfig() end
+									end
+								end
+							end
+						end
 					end
 				end
-			end
-			Gui.endChild()
 
-			Gui.beginChild("ares_column", 300, 300, true)
-			for _, group in ipairs(aresLocationGroups) do
-				if _ > 1 then
-					Gui.separator()
-				end
-				for _, label in ipairs(group.labels) do
-					local location = startLocations.Ares[label]
-					if location and Gui.selectable(label, false) then
-						goToLocation(location)
+				if Gui.collapsingHeader("Ares") then
+					local firstGroup = true
+
+					for _, group in ipairs(aresLocationGroups) do
+						if not firstGroup then
+							Gui.separator()
+						end
+						firstGroup = false
+
+						for _, locName in ipairs(group.labels) do
+							if startLocations.Ares[locName] then
+								if Gui.selectable(locName, defaultSpawnName == locName) then
+									defaultSpawnMapType = "Ares"
+									defaultSpawnName = locName
+									config.defaultSpawnMapType = defaultSpawnMapType
+									config.defaultSpawnName = defaultSpawnName
+									if saveConfig then saveConfig() end
+								end
+							end
+						end
 					end
 				end
+
+				if Gui.collapsingHeader("Shuttle##g") then
+					if startLocations.Shuttle and startLocations.Shuttle["Shuttle"] then
+						if Gui.selectable("Shuttle##tp", defaultSpawnName == "Shuttle") then
+							defaultSpawnMapType = "Shuttle"
+							defaultSpawnName = "Shuttle"
+							config.defaultSpawnMapType = defaultSpawnMapType
+							config.defaultSpawnName = defaultSpawnName
+							if saveConfig then saveConfig() end
+						end
+					end
+				end
+
+				Gui.endCombo()
 			end
-			Gui.endChild()
 
-			Gui.endHorizontal()
+			Gui.sameLine()
+			Gui.text("Default Spawn")
 
+			if currentMapType == "Ares" then
+				Gui.beginChild("ares_column_single", 605, 300, true)
+				for idx, group in ipairs(aresLocationGroups) do
+					if idx > 1 then
+						Gui.separator()
+					end
+					for _, label in ipairs(group.labels) do
+						local location = startLocations.Ares[label]
+						if location and Gui.selectable(label, false) then
+							goToLocation(location)
+						end
+					end
+				end
+				Gui.endChild()
+			else
+				Gui.beginHorizontal("location_columns")
+
+				Gui.beginChild("orion_column_left", 300, 350, true)
+				for idx, group in ipairs(orionLocationGroups) do
+					if idx > 1 then
+						Gui.separator()
+					end
+					for _, label in ipairs(group.labels) do
+						local location = startLocations.Orion[label]
+						if location and Gui.selectable(label, false) then
+							goToLocation(location)
+						end
+					end
+				end
+				Gui.endChild()
+
+				Gui.beginChild("orion_column_right", 300, 350, true)
+				for idx, group in ipairs(orionLocationGroups2) do
+					if idx > 1 then
+						Gui.separator()
+					end
+					for _, label in ipairs(group.labels) do
+						local location = startLocations.Orion[label]
+						if location and Gui.selectable(label, false) then
+							goToLocation(location)
+						end
+					end
+				end
+				Gui.endChild()
+
+				Gui.endHorizontal()
+			end
+		end
+
+		if showLocationWriter then
+			if Gui.collapsingHeader("Location Writer##debugLocationWriter") then
+				Gui.textDisabled("Debug tool to make more locations")
+				
+				Gui.setNextItemWidth(300)
+				debugLocationName = Gui.inputText("##LocationNameInput", debugLocationName)
+				Gui.sameLine()
+				Gui.textDisabled("Location name")
+				
+				if Gui.button("Send to logs##captureLocation") then
+					local line = formatLocationLine(debugLocationName, camera.position, camera.rotation, camera.fieldOfView)
+					print(line)
+				end
+			end
 		end
 
         Gui.newLine()
@@ -690,6 +765,41 @@ end
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Cog, "Settings")) then
+		if Gui.collapsingHeader("Controls") then
+			if Gui.beginTable("ControlsTable", 3) then
+				Gui.tableSetupColumn("Action", 0, 0.4)
+				Gui.tableSetupColumn("Keyboard & Mouse", 0, 0.3)
+				Gui.tableSetupColumn("Controller", 0, 0.3)
+				Gui.tableHeadersRow()
+
+				local function addRow(action, keyboard, controller)
+					Gui.tableNextRow()
+					Gui.tableNextColumn()
+					Gui.text(action)
+					Gui.tableNextColumn()
+					Gui.textDisabled(keyboard or "")
+					Gui.tableNextColumn()
+					Gui.textDisabled(controller or "")
+				end
+
+				addRow("Move", "WASD", "Left Stick")
+				addRow("Fly Up or Down", "Q / E", "Triggers")
+				addRow("Speed Up", "Left Shift", "Right Shoulder")
+				addRow("Slow Down", "Left Control", "Left Shoulder")
+				addRow("Pan", "Mouse", "Right Stick")
+				addRow("Roll", "Hold Right Click", "D-Pad Left and Right")
+				addRow("Reset Roll", "Middle Mouse Click", "Left Stick Click")
+				addRow("Align to Gravity", "Spacebar", "Right Stick Click")
+				addRow("Frontflip", "Arrow Up", "Y / Face Up")
+				addRow("Backflip", "Arrow Down", "A / Face Down")
+				addRow("Toggle Smoothing", "Caps Lock", "B / Face Right")
+				addRow("Toggle Freecam/Handcam", "--", "X / Face Left")
+				addRow("Zoom", "Scrollwheel", "D-Pad Up and Down")
+
+				Gui.endTable()
+			end
+		end
+
 		Gui.separatorText("Keybinds")
 		Gui.textDisabled("Type key names like F9, L, or SpaceBar. Mouse keybinds are not recognized.")
 
@@ -851,11 +961,11 @@ end
 
 		Gui.sameLine()
 		Gui.setNextItemWidth(200)
-		local newTeleportRealm, newTeleportName = drawLocationCombo("Location", teleportRealm, teleportName)
-		if newTeleportRealm ~= teleportRealm or newTeleportName ~= teleportName then
-			teleportRealm = newTeleportRealm
+		local newTeleportMapType, newTeleportName = drawLocationCombo("Location", teleportMapType, teleportName)
+		if newTeleportMapType ~= teleportMapType or newTeleportName ~= teleportName then
+			teleportMapType = newTeleportMapType
 			teleportName = newTeleportName
-			config.teleportRealm = teleportRealm
+			config.teleportMapType = teleportMapType
 			config.teleportName = teleportName
 			if saveConfig then saveConfig() end
 		end
@@ -863,68 +973,6 @@ end
 			Gui.endDisabled()
 		end
 
-		Gui.newLine()
-
-		Gui.separatorText("Controls")
-		if Gui.beginTable("ControlsTable", 3) then
-			Gui.tableSetupColumn("Action", 0, 0.4)
-			Gui.tableSetupColumn("Keyboard & Mouse", 0, 0.3)
-			Gui.tableSetupColumn("Controller", 0, 0.3)
-			Gui.tableHeadersRow()
-
-			local function addRow(action, keyboard, controller)
-				Gui.tableNextRow()
-				Gui.tableNextColumn()
-				Gui.text(action)
-				Gui.tableNextColumn()
-				Gui.textDisabled(keyboard or "")
-				Gui.tableNextColumn()
-				Gui.textDisabled(controller or "")
-			end
-
-			addRow("Move", "WASD", "Left Stick")
-			addRow("Fly Up or Down", "Q / E", "Triggers")
-			addRow("Speed Up", "Left Shift", "Right Shoulder")
-			addRow("Slow Down", "Left Control", "Left Shoulder")
-			addRow("Pan", "Mouse", "Right Stick")
-			addRow("Roll", "Hold Right Click", "D-Pad Left and Right")
-			addRow("Reset Roll", "Middle Mouse Click", "Left Stick Click")
-			addRow("Align to Gravity", "Spacebar", "Right Stick Click")
-			addRow("Frontflip", "Arrow Up", "Y / Face Up")
-			addRow("Backflip", "Arrow Down", "A / Face Down")
-			addRow("Toggle Smoothing", "Caps Lock", "B / Face Right")
-			addRow("Toggle Freecam/Handcam", "Freecam / Handcam keybinds", "X / Face Left")
-			addRow("Zoom", "Scrollwheel", "D-Pad Up and Down")
-
-			Gui.endTable()
-		end
-
-		Gui.newLine()
-
-		Gui.separatorText("Smoothing")
-		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
-		if newSmoothing ~= Inputs.smoothing then
-			Inputs.smoothing = newSmoothing
-			config.smoothing = newSmoothing
-			Util.setSmoothing(Inputs.smoothing, Inputs)
-			if saveConfig then saveConfig() end
-		end
-		
-		if not Inputs.smoothing then
-			Gui.beginDisabled()
-		end
-		
-		local newLookSmoothness = Gui.sliderFloat("Look Smoothness", Inputs.lookSmoothness, 0, 1)
-		if newLookSmoothness ~= Inputs.lookSmoothness then
-			Inputs.lookSmoothness = newLookSmoothness
-			config.lookSmoothness = newLookSmoothness
-			if saveConfig then saveConfig() end
-		end
-		
-		if not Inputs.smoothing then
-			Gui.endDisabled()
-		end
-		
 		Gui.newLine()
 
 		Gui.separatorText("Customization")
@@ -935,18 +983,6 @@ end
 			config.showModelsTab = showModelsTab
 			if saveConfig then saveConfig() end
 		end
-
-		local newDisconnectConfirmation = Gui.checkbox("Disconnect confirmation", disconnectConfirmation)
-		if newDisconnectConfirmation ~= disconnectConfirmation then
-			disconnectConfirmation = newDisconnectConfirmation
-			config.disconnectConfirmation = disconnectConfirmation
-			if not disconnectConfirmation then
-				disconnectPending = false
-			end
-			if saveConfig then saveConfig() end
-		end
-
-		Gui.setItemTooltip("When enabled, you will be asked to confirm before disconnecting from a server")
 
 		local tabTitleModeLabel = "Icon + name"
 		if tabTitleMode == "name" then
@@ -990,22 +1026,24 @@ end
 
 		Gui.newLine()
 
-		Gui.separatorText("Experimental")
-		Gui.textDisabled("Super secret settings")
+		Gui.separatorText("Other")
+
 		local newCollisionEnabled = Gui.checkbox("Enable Collisions", collisionEnabled)
 		if newCollisionEnabled ~= collisionEnabled then
 			collisionEnabled = newCollisionEnabled
 			config.collisionEnabled = collisionEnabled
 			if saveConfig then saveConfig() end
 		end
-
-		Gui.newLine()
-
-		Gui.separatorText("Debug")
-
 		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
 		if newShowAxisDebug ~= config.showAxisDebug then
 			config.showAxisDebug = newShowAxisDebug
+			if saveConfig then saveConfig() end
+		end
+
+		local newShowLocationWriter = Gui.checkbox("Show Location Writer##debugShowLocationWriter", showLocationWriter)
+		if newShowLocationWriter ~= showLocationWriter then
+			showLocationWriter = newShowLocationWriter
+			config.showLocationWriter = showLocationWriter
 			if saveConfig then saveConfig() end
 		end
 
@@ -1241,6 +1279,11 @@ end
 			Models.onTextGui()
 			Gui.endTabItem()
 		end
+
+		if Gui.beginTabItem(Icon.Lightbulb .. "  Lights") then
+			Models.onLightsGui()
+			Gui.endTabItem()
+		end
 		
 		Gui.endTabBar()
 		Gui.endTabItem()
@@ -1277,11 +1320,7 @@ function tick(dt)
 	if enableDisconnectKey then
 		local keyEnum = parseKeyStr(disconnectKeyStr)
 		if keyEnum and Input.getKeyDown(keyEnum) then
-			if disconnectConfirmation then
-				disconnectPending = true
-			else
-				Network.disconnectFromServer()
-			end
+			Network.disconnectFromServer()
 		end
 	end
 
@@ -1341,6 +1380,7 @@ function tick(dt)
 
 	if Axis.isEnabled then
 		Axis.tick(dt)
+		Models.updateHud(dt)
 		return
 	end
 
@@ -1374,7 +1414,7 @@ function tick(dt)
 	if enableTeleportKey then
 		local keyEnum = parseKeyStr(teleportKeyStr)
 		if keyEnum and Input.getKeyDown(keyEnum) then
-			local teleportLocation = startLocations[teleportRealm] and startLocations[teleportRealm][teleportName]
+			local teleportLocation = startLocations[teleportMapType] and startLocations[teleportMapType][teleportName]
 			if teleportLocation then
 				goToLocation(teleportLocation)
 			end
@@ -1565,6 +1605,8 @@ function tick(dt)
 		camera.rotation = targetRot
 		Inputs.rotEuler = camera.rotation:euler()
 	end
+
+	Models.updateHud(dt)
 
 end
 
