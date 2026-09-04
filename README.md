@@ -1,17 +1,17 @@
 # august.procam
 procam is a fork of another axiom's freecam, which fixes several bugs, improves on every gui, adds 50+ new features and quality-of-life improvements, and so much more!
 
-**functionality**
-* gui
+## Functionality
+### gui
   - tabs
   - customization
   - server you're in
-* camera
+### camera
   - arrow up key to frontflip
   - arrow down key to backflip
   - middle mouse button to reset roll
   - fixed post processing issues
-* home
+### home
   - quick settings
   - better emotes gui + cycling emotes
   - more organized
@@ -19,36 +19,39 @@ procam is a fork of another axiom's freecam, which fixes several bugs, improves 
   - screenshots F9 hotkey
   - more locations to teleport to
   - set default spawn location
-* handcam
+### handcam
   - __fork of pub's driftvision!__
   - first, third person, handheld, floating, ball mode, manual orbit, grab camera, extend/retract, owner system, slingshot, etc!
-* settings
+### settings
   - better organized controls
   - customization
   - more debug gui
-* players
+### players
   - see all players and spectators
   - teleport to any player or spectator
   - start following any player or spectator
   - mute or unmute players
-* draw
+### draw
   - __upload files to august.procam/assets__
   - __don't delete /assets/font__
-  - consists of drawing: models, images & gifs, text
+  - consists of drawing: models, images & gifs, text, and lights
   - better gui everywhere
   - uses glb to draw stuff
-* draw: models
+### draw: models
   - skybox template
   - included skybox assets
   - track model to player hand(s)
-* draw: images & gifs
+### draw: images & gifs
   - loads in a plane and attaches image texture
   - does the same but for every frame for gifs
-* draw: text
+### draw: lights
+  - create lights
+### draw: text
   - 3D & 2D text
   - uses 2 kb model for each character so it runs very well
   - rainbow color
 
+## Legal
 > [!WARNING]
 > Uses anotheraxiom.freecam as a base, pub's driftvision for the handcam tab, and anotheraxiom.modelviewer for the draw tab's base logic.
 
