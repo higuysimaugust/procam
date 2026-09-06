@@ -12,6 +12,12 @@ local collisionEnabled = config.collisionEnabled
 if collisionEnabled == nil then collisionEnabled = false end
 local collisionRadius = 100
 local gravityChaser = gravity.upRotation
+local gravityTarget = gravity.upRotation
+local gravityRegionPosition = Vec3.new(-240.0, -5710.0, 0.0)
+local gravityRegionRotation = Quat.fromEuler(0.0, -60.0, 0.0)
+local gravityRegionHalfScale = Vec3.new(9700.0, 15015.0, 9700.0)
+local gravityRegionTimer = 0
+local gravityRegionRayDistance = 1000000
 local tabTitleMode = config.tabTitleMode or "icon+name"
 local showModelsTab = config.showModelsTab
 if showModelsTab == nil then showModelsTab = true end
@@ -307,8 +313,66 @@ local flipDuration = 0.5
 local ntimer = 0
 local ndelay = 0.01
 
+local function isInsideGravityRegion(position: Vec3): boolean
+	local localPosition = gravityRegionRotation:inverse():rotateVector(position - gravityRegionPosition)
+	return math.abs(localPosition.x) <= gravityRegionHalfScale.x
+		and math.abs(localPosition.y) <= gravityRegionHalfScale.y
+		and math.abs(localPosition.z) <= gravityRegionHalfScale.z
+end
+
+local function getRaycastGravityRotation(): Quat?
+	local currentUp = gravityChaser:getUpVector()
+	if currentUp:length() <= 0 then
+		currentUp = Vec3.upVector
+	end
+
+	local right = camera.rotation:getRightVector()
+	local forward = camera.rotation:getForwardVector()
+	local directions = {
+		currentUp:getSafeNormal(),
+		-currentUp:getSafeNormal(),
+		right:getSafeNormal(),
+		-right:getSafeNormal(),
+		forward:getSafeNormal(),
+		-forward:getSafeNormal(),
+	}
+	local nearestHit = nil
+	local nearestDistance = math.huge
+
+	for _, direction in ipairs(directions) do
+		local hit = camera:castRay(camera.position, camera.position + direction * gravityRegionRayDistance)
+		if hit.successful and hit.normal and hit.normal:length() > 0 then
+			local distance = Vec3.distance(camera.position, hit.position)
+			if distance < nearestDistance then
+				nearestHit = hit
+				nearestDistance = distance
+			end
+		end
+	end
+
+	if not nearestHit then
+		return nil
+	end
+
+	local hitNormal = nearestHit.normal:getSafeNormal()
+	local alignedForward = Util.projectVectorOntoPlane(camera.rotation:getForwardVector(), hitNormal):getSafeNormal()
+	if alignedForward:length() <= 0 then
+		alignedForward = Util.projectVectorOntoPlane(camera.rotation:getRightVector(), hitNormal):getSafeNormal()
+	end
+	if alignedForward:length() <= 0 then
+		return nil
+	end
+
+	return Quat.fromXZ(alignedForward, hitNormal)
+end
+
 local function snapToGravity()
-	gravityChaser = gravity.upRotation
+	if isInsideGravityRegion(camera.position) then
+		gravityTarget = getRaycastGravityRotation() or gravity.upRotation
+	else
+		gravityTarget = gravity.upRotation
+	end
+	gravityChaser = gravityTarget
 	Inputs.rotEuler.x = 0
 end
 
@@ -1306,6 +1370,20 @@ function tick(dt)
 	Models.tick(dt)
 	timer = timer + dt
 
+	local insideGravityRegion = isInsideGravityRegion(camera.position)
+	if insideGravityRegion then
+		if Inputs.alignToGravity then
+			gravityRegionTimer += dt
+			if gravityRegionTimer >= 1 then
+				gravityTarget = getRaycastGravityRotation() or gravity.upRotation
+				gravityRegionTimer = 0
+			end
+		end
+	else
+		gravityRegionTimer = 0
+		gravityTarget = gravity.upRotation
+	end
+
 	if screenshotSuccessTimer > 0 then
 		screenshotSuccessTimer = math.max(0, screenshotSuccessTimer - dt)
 	end
@@ -1538,9 +1616,9 @@ function tick(dt)
 	local nextLookDiff = Inputs.lookInputTarget * math.min((1 - adjustedLookSmoothness) * dt * 60, 1)
 
 	if Inputs.alignToGravity then
-		if gravityChaser ~= gravity.upRotation and gravity.strength ~= 0 then
+		if gravityChaser ~= gravityTarget and (insideGravityRegion or gravity.strength ~= 0) then
 			local inputTotal = nextLookDiff:length()
-			local nextGravityChaser = Quat.slerp(gravityChaser, gravity.upRotation, (inputTotal * Inputs.gravityChaseSpeed + Inputs.gravitySlowChaseSpeed) * dt)
+			local nextGravityChaser = Quat.slerp(gravityChaser, gravityTarget, (inputTotal * Inputs.gravityChaseSpeed + Inputs.gravitySlowChaseSpeed) * dt)
 			local nextRotation = nextGravityChaser:inverse() * Quat.fromXZ(forward, nextGravityChaser:rotateVector(Vec3.new(0, 0, 1)))
 			Inputs.rotEuler = nextRotation:euler() + Vec3.new(Inputs.rotEuler.x, 0, 0)
 			gravityChaser = nextGravityChaser
