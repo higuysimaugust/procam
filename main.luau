@@ -3,6 +3,7 @@ local Util = require("util")
 local Emotes = require("emotes")
 local Models = require("models")
 local Axis = require("axis")
+local Replays = require("replays")
 
 config = config or {}
 
@@ -21,6 +22,8 @@ local gravityRegionRayDistance = 1000000
 local tabTitleMode = config.tabTitleMode or "icon+name"
 local showModelsTab = config.showModelsTab
 if showModelsTab == nil then showModelsTab = true end
+local showReplayTab = config.showReplayTab
+if showReplayTab == nil then showReplayTab = true end
 config.showAxisDebug = config.showAxisDebug ~= nil and config.showAxisDebug or false
 Inputs.enableSpaceKeybind = config.enableSpaceKeybind ~= nil and config.enableSpaceKeybind or false
 if config.alignToGravity == nil then config.alignToGravity = true end
@@ -305,6 +308,22 @@ local lastEmoteCycleTime = 0
 local emoteCycleInterval = config.emoteCycleInterval or 1.0
 local timer = 0
 
+local zDriftBallOutlineEnabled = config.zDriftBallOutlineEnabled or false
+local zDriftBallResolution = config.zDriftBallResolution or 10
+local zDriftBallHorizontal = config.zDriftBallHorizontal or 5
+local zDriftBallVertical = config.zDriftBallVertical or 5
+local zDriftBallScale = config.zDriftBallScale or 37
+local zDriftBallOuterScale = config.zDriftBallOuterScale or 1.1
+local zDriftBallThickness = config.zDriftBallThickness or 1
+local zDriftBallOuterThickness = config.zDriftBallOuterThickness or 1
+local savedZDriftBallColor = config.zDriftBallColor
+local zDriftBallColor = savedZDriftBallColor and LinearColor.new(
+	savedZDriftBallColor.r or 1,
+	savedZDriftBallColor.g or 1,
+	savedZDriftBallColor.b or 1,
+	savedZDriftBallColor.a or 1
+) or LinearColor.new(1, 1, 1, 1)
+
 local flipActive = false
 local flipDirection = 1
 local flipTimer = 0
@@ -364,6 +383,111 @@ local function getRaycastGravityRotation(): Quat?
 	end
 
 	return Quat.fromXZ(alignedForward, hitNormal)
+end
+
+local function getNearestZDriftBall(position: Vec3)
+	local nearestBall = nil
+	local nearestDistance = math.huge
+	local frames = getAllGameData and getAllGameData() or {}
+
+	for _, frame in ipairs(frames) do
+		if frame and frame.balls then
+			for _, ball in ipairs(frame.balls) do
+				if ball and ball.transform and ball.transform.position then
+					local distance = Vec3.distance(position, ball.transform.position)
+					if distance < nearestDistance then
+						nearestBall = ball
+						nearestDistance = distance
+					end
+				end
+			end
+		end
+	end
+
+	return nearestBall
+end
+
+local function drawZDriftBallCircle(
+	position: Vec3,
+	radius: number,
+	direction: Vec3?,
+	colour: LinearColor,
+	lineWidth: number,
+	resolution: number
+)
+	if not direction then
+		direction = (position - camera.position):getSafeNormal()
+	end
+	if direction:length() <= 0 then
+		return
+	end
+
+	local arbitraryVector = if direction ~= Vec3.upVector then Vec3.upVector else Vec3.rightVector
+	local upDirection = direction:cross(arbitraryVector):normalize()
+	local rightDirection = direction:cross(upDirection):normalize()
+	local previousPoint = nil
+	for theta = 0, math.pi * 2, math.pi / resolution do
+		local point = upDirection * math.sin(theta) + rightDirection * math.cos(theta)
+		if previousPoint then
+			WorldDraw.drawLine(
+				position + previousPoint * radius,
+				position + point * radius,
+				colour.r * 2,
+				colour.g * 2,
+				colour.b * 2,
+				lineWidth,
+				0
+			)
+		end
+		previousPoint = point
+	end
+end
+
+local function drawZDriftBallOutline()
+	if not zDriftBallOutlineEnabled then
+		return
+	end
+
+	local ball = getNearestZDriftBall(camera.position)
+	if not ball then
+		return
+	end
+
+	local position = ball.transform.position
+	for vertical = 0, zDriftBallVertical do
+		local angle = (vertical / zDriftBallVertical) * math.pi
+		local y = math.cos(angle) * zDriftBallScale
+		local radius = math.sin(angle) * zDriftBallScale
+		drawZDriftBallCircle(
+			position + Vec3.new(0, y, 0),
+			radius,
+			Vec3.new(0, 1, 0),
+			zDriftBallColor,
+			zDriftBallThickness,
+			zDriftBallResolution
+		)
+	end
+
+	for horizontal = 0, zDriftBallHorizontal - 1 do
+		local angle = (horizontal / zDriftBallHorizontal) * math.pi * 2
+		drawZDriftBallCircle(
+			position,
+			zDriftBallScale,
+			Vec3.new(math.cos(angle), 0, math.sin(angle)),
+			zDriftBallColor,
+			zDriftBallThickness,
+			zDriftBallResolution
+		)
+	end
+
+	drawZDriftBallCircle(
+		position,
+		zDriftBallScale * zDriftBallOuterScale,
+		nil,
+		zDriftBallColor,
+		zDriftBallThickness * zDriftBallOuterThickness,
+		zDriftBallResolution * 2
+	)
 end
 
 local function snapToGravity()
@@ -1048,6 +1172,13 @@ function onGui()
 			if saveConfig then saveConfig() end
 		end
 
+		local newShowReplayTab = Gui.checkbox("Show Replay tab", showReplayTab)
+		if newShowReplayTab ~= showReplayTab then
+			showReplayTab = newShowReplayTab
+			config.showReplayTab = showReplayTab
+			if saveConfig then saveConfig() end
+		end
+
 		local tabTitleModeLabel = "Icon + name"
 		if tabTitleMode == "name" then
 			tabTitleModeLabel = "Name"
@@ -1135,12 +1266,28 @@ function onGui()
 			if saveConfig then saveConfig() end
 		end
 
+		Gui.separatorText("Ball")
+
 		local newBallScaleMultiplier = Gui.sliderFloat("Ball scale multiplier", Inputs.ballScaleMultiplier, 0, 10)
 		if newBallScaleMultiplier ~= Inputs.ballScaleMultiplier then
 			Inputs.ballScaleMultiplier = newBallScaleMultiplier
 			config.ballScaleMultiplier = newBallScaleMultiplier
 			spectatorDebug.replayBallScaleMultiplier = Inputs.ballScaleMultiplier
 			if saveConfig then saveConfig() end
+		end
+
+		local newZDriftBallOutlineEnabled = Gui.checkbox("Z-Drift ball outline", zDriftBallOutlineEnabled)
+		if newZDriftBallOutlineEnabled ~= zDriftBallOutlineEnabled then
+			zDriftBallOutlineEnabled = newZDriftBallOutlineEnabled
+			config.zDriftBallOutlineEnabled = zDriftBallOutlineEnabled
+			if saveConfig then saveConfig() end
+		end
+
+		if zDriftBallOutlineEnabled then
+			Gui.beginDisabled()
+			Gui.sameLine()
+			Gui.text("The nearest ball will now use an outline.")
+			Gui.endDisabled()
 		end
 
 		Gui.endTabItem()
@@ -1326,6 +1473,11 @@ function onGui()
     	Gui.endTabItem()
 	end
 
+	if showReplayTab and Gui.beginTabItem(getTabTitle(Icon.Play, "Replays")) then
+		Replays.onGui()
+		Gui.endTabItem()
+	end
+
 	if showModelsTab and Gui.beginTabItem(getTabTitle(Icon.VectorSquare, "Draw")) then
 		Gui.beginTabBar("DrawSubTabs")
 		
@@ -1368,6 +1520,7 @@ function tick(dt)
 	end
 
 	Models.tick(dt)
+	drawZDriftBallOutline()
 	timer = timer + dt
 
 	local insideGravityRegion = isInsideGravityRegion(camera.position)
