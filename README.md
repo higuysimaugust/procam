@@ -1,55 +1,62 @@
 # august.procam
-procam is a fork of another axiom's freecam, which fixes several bugs, improves on every gui, adds 50+ new features and quality-of-life improvements, and so much more!
+Procam is a giant script combining Freecam, Handcam (Gopro/Driftvision), drawing models/images/GIFs/texts/lights, adding 50+ new features, several bug fixes, improvements, and WAY more!
+
+It is *the* script to use all the time. Everything is perfected for any use-case!
+
+# READ THIS
+Downloading procam from the registry is BROKEN. It will rate-limit you due to the amount of files.
+### It's getting fixed!
+Next update, await a fix. For now, use the Discord forum post.
 
 ## Functionality
-### gui
-  - tabs
-  - customization
-  - server you're in
-### camera
-  - arrow up key to frontflip
-  - arrow down key to backflip
-  - middle mouse button to reset roll
-  - fixed post processing issues
-### home
-  - quick settings
-  - better emotes gui + cycling emotes
-  - more organized
-  - screenshots
-  - screenshots F9 hotkey
-  - more locations to teleport to
-  - set default spawn location
-### handcam
-  - __fork of pub's driftvision!__
-  - first, third person, handheld, floating, ball mode, manual orbit, grab camera, extend/retract, owner system, slingshot, etc!
-### settings
-  - better organized controls
-  - customization
-  - more debug gui
-### players
-  - see all players and spectators
-  - teleport to any player or spectator
-  - start following any player or spectator
-  - mute or unmute players
-### draw
-  - __upload files to august.procam/assets__
-  - __don't delete /assets/font__
-  - consists of drawing: models, images & gifs, text, and lights
-  - better gui everywhere
-  - uses glb to draw stuff
-### draw: models
-  - skybox template
-  - included skybox assets
-  - track model to player hand(s)
-### draw: images & gifs
-  - loads in a plane and attaches image texture
-  - does the same but for every frame for gifs
-### draw: lights
-  - create lights
-### draw: text
+### GUI
+  - Tabs
+  - Customization
+  - Server management
+  - Customizable keybinds
+  - Perfected GUI everywhere
+### Camera
+  - Arrow Up key to frontflip
+  - Arrow Down key to backflip
+  - Middle Mouse button to reset roll
+  - Fixed post processing issues
+### Home
+  - Better Emotes + Cycling
+  - Completely re-organized for fast and effective use
+  - Screenshots (+ keybind)
+  - Teleport to new locations and set default spawn
+### Handcam
+__Rework of Pub's DriftVision with new features!__
+  - First person, third person, handheld, floating, ball mode, manual orbit, grab camera, extend/retract, owner system, slingshot, etc!
+### Settings
+  - Completely re-organized and perfected
+  - Collisions, Z-Drift Ball Outline, Customization, owner system, and more additions
+### Players
+  - See all Players and Spectators in one place
+  - Teleport to any player or spectator
+  - Start following anyone first-person
+### Replays
+  - Manage several replays at once
+  - Load, set times, unload, play, restart easily
+### Draw
+__Upload files to august.procam/assets__
+__Don't delete /assets/font!__
+  - Consists of drawing: models, images & GIFs, text, and lights
+  - Improved GUI
+  - GLB and GLTF for drawing models
+### Draw (3D Models)
+  - Track model to player hand(s)
+### Draw (Images & GIFs)
+__Visit august-image.vercel.app/ to make GIFs__
+  - Draw images!
+  - Draw GIFs!
+### Draw (Lights)
+  - Create, manage, and track lights
+  - Player-tracked lights to improve streams and recordings
+### Draw (Text)
   - 3D & 2D text
-  - uses 2 kb model for each character so it runs very well
-  - rainbow color
+  - Super fast performance
+  - Rainbow color
 
 ## Legal
 > [!WARNING]
