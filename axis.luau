@@ -1711,6 +1711,7 @@ function Axis.onUnload()
     if camera then
         camera.hideNearestHead = false
         camera.showNameTags = true
+        Util.setSmoothing(Inputs.smoothing, Inputs)
     end
     if activePlayerId then
         config.currentPlayerId = activePlayerId

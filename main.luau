@@ -85,10 +85,55 @@ local function parseKeyStr(keyStr: string)
 	if not keyStr or keyStr == "" then
 		return nil
 	end
-	if string.find(keyStr, "Mouse") then
+
+	local normalizedKeyStr = tostring(keyStr):gsub("^%s+", ""):gsub("%s+$", "")
+	if normalizedKeyStr == "" then
 		return nil
 	end
-	return Input.Key[keyStr]
+
+	local aliasMap = {
+		MouseLeft = Input.Key.LeftMouseButton,
+		MouseRight = Input.Key.RightMouseButton,
+		MouseMiddle = Input.Key.MiddleMouseButton,
+		MouseSide1 = Input.Key.ThumbMouseButton,
+		MouseSide2 = Input.Key.ThumbMouseButton2,
+		ControllerLeftTrigger = Input.Gamepad.LeftTrigger,
+		ControllerRightTrigger = Input.Gamepad.RightTrigger,
+		ControllerLeftBumper = Input.Gamepad.LeftShoulder,
+		ControllerRightBumper = Input.Gamepad.RightShoulder,
+		ControllerFaceUp = Input.Gamepad.FaceButton_Top,
+		ControllerFaceDown = Input.Gamepad.FaceButton_Bottom,
+		ControllerFaceLeft = Input.Gamepad.FaceButton_Left,
+		ControllerFaceRight = Input.Gamepad.FaceButton_Right,
+		ControllerDPadUp = Input.Gamepad.DPad_Up,
+		ControllerDPadDown = Input.Gamepad.DPad_Down,
+		ControllerDPadLeft = Input.Gamepad.DPad_Left,
+		ControllerDPadRight = Input.Gamepad.DPad_Right,
+		ControllerLeftStickClick = Input.Gamepad.LeftThumbstick,
+		ControllerRightStickClick = Input.Gamepad.RightThumbstick,
+	}
+
+	if aliasMap[normalizedKeyStr] then
+		return aliasMap[normalizedKeyStr]
+	end
+
+	local normalizedLower = string.lower(normalizedKeyStr)
+	for alias, value in pairs(aliasMap) do
+		if string.lower(alias) == normalizedLower then
+			return value
+		end
+	end
+
+	local keyValue = Input.Key[normalizedKeyStr] or Input.Gamepad[normalizedKeyStr]
+	if keyValue then
+		return keyValue
+	end
+
+	if string.find(normalizedLower, "mouse") then
+		return nil
+	end
+
+	return Input.Key[normalizedKeyStr] or Input.Gamepad[normalizedKeyStr]
 end
 
 local emoteLabels = {
@@ -252,7 +297,7 @@ end
 local function drawLocationCombo(comboId, selectedMapType, selectedName)
     if Gui.beginCombo(comboId, selectedName) then
         local function drawMapType(MapTypeName, groups)
-            if Gui.collapsingHeader(MapTypeName) then
+            if Gui.collapsingHeader(MapTypeName .. "##" .. comboId .. "_" .. MapTypeName) then
                 local firstGroup = true
                 for _, group in ipairs(groups) do
                     if not firstGroup then
@@ -261,7 +306,8 @@ local function drawLocationCombo(comboId, selectedMapType, selectedName)
                     firstGroup = false
 
                     for _, locationName in ipairs(group.labels) do
-                        if startLocations[MapTypeName][locationName] and Gui.selectable(locationName, selectedMapType == MapTypeName and selectedName == locationName) then
+                        local locationItemId = comboId .. "_" .. MapTypeName .. "_" .. locationName
+                        if startLocations[MapTypeName][locationName] and Gui.selectable(locationName .. "##" .. locationItemId, selectedMapType == MapTypeName and selectedName == locationName) then
                             selectedMapType = MapTypeName
                             selectedName = locationName
                         end
@@ -273,8 +319,8 @@ local function drawLocationCombo(comboId, selectedMapType, selectedName)
         drawMapType("Orion", orionLocationGroups)
         drawMapType("Orion", orionLocationGroups2)
         drawMapType("Ares", aresLocationGroups)
-        if Gui.collapsingHeader("Shuttle##teleport") then
-            if startLocations.Shuttle and startLocations.Shuttle.Shuttle and Gui.selectable("Shuttle", selectedMapType == "Shuttle" and selectedName == "Shuttle") then
+        if Gui.collapsingHeader("Shuttle##" .. comboId .. "_Shuttle") then
+            if startLocations.Shuttle and startLocations.Shuttle.Shuttle and Gui.selectable("Shuttle##" .. comboId .. "_ShuttleChoice", selectedMapType == "Shuttle" and selectedName == "Shuttle") then
                 selectedMapType = "Shuttle"
                 selectedName = "Shuttle"
             end
@@ -309,13 +355,9 @@ local emoteCycleInterval = config.emoteCycleInterval or 1.0
 local timer = 0
 
 local zDriftBallOutlineEnabled = config.zDriftBallOutlineEnabled or false
-local zDriftBallResolution = config.zDriftBallResolution or 10
-local zDriftBallHorizontal = config.zDriftBallHorizontal or 5
-local zDriftBallVertical = config.zDriftBallVertical or 5
-local zDriftBallScale = config.zDriftBallScale or 37
-local zDriftBallOuterScale = config.zDriftBallOuterScale or 1.1
+local zDriftBallSubdivision = math.clamp(config.zDriftBallSubdivision or 3, 3, 4)
+local zDriftBallRadius = config.zDriftBallRadius or config.zDriftBallScale or 37
 local zDriftBallThickness = config.zDriftBallThickness or 1
-local zDriftBallOuterThickness = config.zDriftBallOuterThickness or 1
 local savedZDriftBallColor = config.zDriftBallColor
 local zDriftBallColor = savedZDriftBallColor and LinearColor.new(
 	savedZDriftBallColor.r or 1,
@@ -331,6 +373,77 @@ local flipDuration = 0.5
 
 local ntimer = 0
 local ndelay = 0.01
+
+local availableKeybindCategories = {
+	{
+		name = "Keyboard",
+		keys = {
+			"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
+			"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+			"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+			"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+			"SpaceBar", "LeftBracket", "RightBracket", "PageUp", "PageDown", "Home", "End", "Insert", "Delete",
+			"Up", "Down", "Left", "Right", 
+			"LeftShift", "RightShift", "LeftControl", "RightControl", "LeftAlt", "RightAlt", 
+			"Tab", "Enter", "Escape", "Backspace", "Tilde"
+		}
+	},
+	{
+		name = "Mouse",
+		keys = {
+			"MouseLeft", "MouseRight", "MouseMiddle", "MouseSide1", "MouseSide2"
+		}
+	},
+	{
+		name = "Controller",
+		keys = {
+			"ControllerLeftTrigger", "ControllerRightTrigger", "ControllerLeftBumper", "ControllerRightBumper",
+			"ControllerFaceUp", "ControllerFaceDown", "ControllerFaceLeft", "ControllerFaceRight",
+			"ControllerDPadUp", "ControllerDPadDown", "ControllerDPadLeft", "ControllerDPadRight",
+			"ControllerLeftStickClick", "ControllerRightStickClick"
+		}
+	}
+}
+
+local keybindSearchStates = {}
+local keybindFilterStates = {}
+
+local function drawKeybindCombo(comboId, currentVal)
+	if Gui.beginCombo(comboId, currentVal == "" and "None" or currentVal) then
+		keybindSearchStates[comboId] = keybindSearchStates[comboId] or ""
+		keybindFilterStates[comboId] = keybindFilterStates[comboId] or "All"
+
+		Gui.setNextItemWidth(250)
+		keybindSearchStates[comboId] = Gui.inputText(Icon.Search .. comboId, keybindSearchStates[comboId])
+		
+		Gui.beginTabBar("Filters##" .. comboId)
+		if Gui.beginTabItem("All") then keybindFilterStates[comboId] = "All"; Gui.endTabItem() end
+		if Gui.beginTabItem("Keyboard") then keybindFilterStates[comboId] = "Keyboard"; Gui.endTabItem() end
+		if Gui.beginTabItem("Mouse") then keybindFilterStates[comboId] = "Mouse"; Gui.endTabItem() end
+		if Gui.beginTabItem("Controller") then keybindFilterStates[comboId] = "Controller"; Gui.endTabItem() end
+		Gui.endTabBar()
+
+		local filter = keybindFilterStates[comboId]
+		local search = string.lower(keybindSearchStates[comboId])
+
+		if Gui.beginChild("##KeysList_" .. comboId, 250, 150, true) then
+			for _, category in ipairs(availableKeybindCategories) do
+				if filter == "All" or filter == category.name then
+					for _, key in ipairs(category.keys) do
+						if search == "" or string.find(string.lower(key), search, 1, true) then
+							if Gui.selectable(key, currentVal == key) then
+								currentVal = key
+							end
+						end
+					end
+				end
+			end
+			Gui.endChild()
+		end
+		Gui.endCombo()
+	end
+	return currentVal
+end
 
 local function isInsideGravityRegion(position: Vec3): boolean
 	local localPosition = gravityRegionRotation:inverse():rotateVector(position - gravityRegionPosition)
@@ -407,40 +520,97 @@ local function getNearestZDriftBall(position: Vec3)
 	return nearestBall
 end
 
-local function drawZDriftBallCircle(
-	position: Vec3,
-	radius: number,
-	direction: Vec3?,
-	colour: LinearColor,
-	lineWidth: number,
-	resolution: number
-)
-	if not direction then
-		direction = (position - camera.position):getSafeNormal()
-	end
-	if direction:length() <= 0 then
-		return
+local zDriftBallMeshCache = {}
+
+local function normalizeZDriftBallPoint(point: Vec3): Vec3
+	return point:getSafeNormal()
+end
+
+local function getZDriftBallMesh(subdivision: number)
+	local cachedMesh = zDriftBallMeshCache[subdivision]
+	if cachedMesh then
+		return cachedMesh
 	end
 
-	local arbitraryVector = if direction ~= Vec3.upVector then Vec3.upVector else Vec3.rightVector
-	local upDirection = direction:cross(arbitraryVector):normalize()
-	local rightDirection = direction:cross(upDirection):normalize()
-	local previousPoint = nil
-	for theta = 0, math.pi * 2, math.pi / resolution do
-		local point = upDirection * math.sin(theta) + rightDirection * math.cos(theta)
-		if previousPoint then
-			WorldDraw.drawLine(
-				position + previousPoint * radius,
-				position + point * radius,
-				colour.r * 2,
-				colour.g * 2,
-				colour.b * 2,
-				lineWidth,
-				0
-			)
-		end
-		previousPoint = point
+	local goldenRatio = (1 + math.sqrt(5)) / 2
+	local baseVertices = {
+		Vec3.new(-1, goldenRatio, 0), Vec3.new(1, goldenRatio, 0),
+		Vec3.new(-1, -goldenRatio, 0), Vec3.new(1, -goldenRatio, 0),
+		Vec3.new(0, -1, goldenRatio), Vec3.new(0, 1, goldenRatio),
+		Vec3.new(0, -1, -goldenRatio), Vec3.new(0, 1, -goldenRatio),
+		Vec3.new(goldenRatio, 0, -1), Vec3.new(goldenRatio, 0, 1),
+		Vec3.new(-goldenRatio, 0, -1), Vec3.new(-goldenRatio, 0, 1),
+	}
+	local faces = {
+		{ 6, 12, 1 }, { 6, 1, 2 }, { 6, 2, 10 }, { 6, 10, 5 },
+		{ 6, 5, 12 }, { 7, 3, 11 }, { 7, 11, 8 }, { 7, 8, 9 },
+		{ 7, 9, 4 }, { 7, 4, 3 }, { 1, 11, 12 }, { 1, 2, 8 },
+		{ 2, 10, 9 }, { 10, 5, 4 }, { 5, 12, 3 }, { 11, 8, 1 },
+		{ 8, 9, 2 }, { 9, 4, 10 }, { 4, 3, 5 }, { 3, 11, 12 }
+	}
+
+	local vertices = {}
+	for _, vertex in ipairs(baseVertices) do
+		table.insert(vertices, normalizeZDriftBallPoint(vertex))
 	end
+
+	for _ = 1, subdivision do
+		local midpointCache = {}
+		local nextFaces = {}
+
+		local function getMidpointIndex(firstIndex: number, secondIndex: number): number
+			local lowIndex = math.min(firstIndex, secondIndex)
+			local highIndex = math.max(firstIndex, secondIndex)
+			local key = tostring(lowIndex) .. ":" .. tostring(highIndex)
+			if midpointCache[key] then
+				return midpointCache[key]
+			end
+
+			local first = vertices[firstIndex]
+			local second = vertices[secondIndex]
+			local midpoint = normalizeZDriftBallPoint(Vec3.new(
+				(first.x + second.x) / 2,
+				(first.y + second.y) / 2,
+				(first.z + second.z) / 2
+			))
+			table.insert(vertices, midpoint)
+			local midpointIndex = #vertices
+			midpointCache[key] = midpointIndex
+			return midpointIndex
+		end
+
+		for _, face in ipairs(faces) do
+			local firstMidpoint = getMidpointIndex(face[1], face[2])
+			local secondMidpoint = getMidpointIndex(face[2], face[3])
+			local thirdMidpoint = getMidpointIndex(face[3], face[1])
+			table.insert(nextFaces, { face[1], firstMidpoint, thirdMidpoint })
+			table.insert(nextFaces, { face[2], secondMidpoint, firstMidpoint })
+			table.insert(nextFaces, { face[3], thirdMidpoint, secondMidpoint })
+			table.insert(nextFaces, { firstMidpoint, secondMidpoint, thirdMidpoint })
+		end
+
+		faces = nextFaces
+	end
+
+	local edges = {}
+	local edgeKeys = {}
+	for _, face in ipairs(faces) do
+		for edgeIndex = 1, 3 do
+			local firstIndex = face[edgeIndex]
+			local secondIndex = face[edgeIndex % 3 + 1]
+			local lowIndex = math.min(firstIndex, secondIndex)
+			local highIndex = math.max(firstIndex, secondIndex)
+			local key = tostring(lowIndex) .. ":" .. tostring(highIndex)
+			if not edgeKeys[key] then
+				edgeKeys[key] = true
+				table.insert(edges, { lowIndex, highIndex })
+			end
+		end
+	end
+
+	cachedMesh = { vertices = vertices, edges = edges }
+	zDriftBallMeshCache[subdivision] = cachedMesh
+	return cachedMesh
 end
 
 local function drawZDriftBallOutline()
@@ -454,40 +624,20 @@ local function drawZDriftBallOutline()
 	end
 
 	local position = ball.transform.position
-	for vertical = 0, zDriftBallVertical do
-		local angle = (vertical / zDriftBallVertical) * math.pi
-		local y = math.cos(angle) * zDriftBallScale
-		local radius = math.sin(angle) * zDriftBallScale
-		drawZDriftBallCircle(
-			position + Vec3.new(0, y, 0),
-			radius,
-			Vec3.new(0, 1, 0),
-			zDriftBallColor,
+	local mesh = getZDriftBallMesh(zDriftBallSubdivision)
+	for _, edge in ipairs(mesh.edges) do
+		local first = mesh.vertices[edge[1]] * zDriftBallRadius
+		local second = mesh.vertices[edge[2]] * zDriftBallRadius
+		WorldDraw.drawLine(
+			position + first,
+			position + second,
+			zDriftBallColor.r * 2,
+			zDriftBallColor.g * 2,
+			zDriftBallColor.b * 2,
 			zDriftBallThickness,
-			zDriftBallResolution
+			0
 		)
 	end
-
-	for horizontal = 0, zDriftBallHorizontal - 1 do
-		local angle = (horizontal / zDriftBallHorizontal) * math.pi * 2
-		drawZDriftBallCircle(
-			position,
-			zDriftBallScale,
-			Vec3.new(math.cos(angle), 0, math.sin(angle)),
-			zDriftBallColor,
-			zDriftBallThickness,
-			zDriftBallResolution
-		)
-	end
-
-	drawZDriftBallCircle(
-		position,
-		zDriftBallScale * zDriftBallOuterScale,
-		nil,
-		zDriftBallColor,
-		zDriftBallThickness * zDriftBallOuterThickness,
-		zDriftBallResolution * 2
-	)
 end
 
 local function snapToGravity()
@@ -803,7 +953,7 @@ function onGui()
 
 			if screenshotSuccessTimer > 0 then
 				Gui.sameLine()
-				Gui.text("Screenshot saved successfully!")
+				Gui.text("Screenshot saved to .../Documents/Another-Axiom/A2/Screenshots")
 			end
 		end
 
@@ -989,7 +1139,7 @@ function onGui()
 		end
 
 		Gui.separatorText("Keybinds")
-		Gui.textDisabled("Type key names like F9, L, or SpaceBar. Mouse keybinds are not recognized.")
+		Gui.textDisabled("Select a keyboard, mouse, or controller keybind.")
 
 		enableScreenshotKey = Gui.checkbox(Icon.Camera .. "  Screenshot", enableScreenshotKey)
 		if enableScreenshotKey ~= config.enableScreenshotKey then
@@ -1001,7 +1151,7 @@ function onGui()
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(200)
-		local newScreenshotKey = Gui.inputText("##ShotKeyInput", screenshotKeyStr)
+		local newScreenshotKey = drawKeybindCombo("##ShotKeyInput", screenshotKeyStr)
 		if newScreenshotKey ~= screenshotKeyStr then
 			screenshotKeyStr = newScreenshotKey
 			config.screenshotKeyStr = screenshotKeyStr
@@ -1021,7 +1171,7 @@ function onGui()
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(200)
-		local newDisconnectKey = Gui.inputText("##DisconnectKeyInput", disconnectKeyStr)
+		local newDisconnectKey = drawKeybindCombo("##DisconnectKeyInput", disconnectKeyStr)
 		if newDisconnectKey ~= disconnectKeyStr then
 			disconnectKeyStr = newDisconnectKey
 			config.disconnectKeyStr = disconnectKeyStr
@@ -1049,7 +1199,7 @@ function onGui()
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(200)
-		local newFreecamKey = Gui.inputText("##FreeKeyInput", freecamKeyStr)
+		local newFreecamKey = drawKeybindCombo("##FreeKeyInput", freecamKeyStr)
 		if newFreecamKey ~= freecamKeyStr then
 			freecamKeyStr = newFreecamKey
 			config.freecamKeyStr = freecamKeyStr
@@ -1073,7 +1223,7 @@ function onGui()
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(200)
-		local newHandcamKey = Gui.inputText("##HandKeyInput", handcamKeyStr)
+		local newHandcamKey = drawKeybindCombo("##HandKeyInput", handcamKeyStr)
 		if newHandcamKey ~= handcamKeyStr then
 			handcamKeyStr = newHandcamKey
 			config.handcamKeyStr = handcamKeyStr
@@ -1093,7 +1243,7 @@ function onGui()
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(100)
-		local newEmoteToggleKey = Gui.inputText("##EmoteToggleKeyInput", emoteToggleKeyStr)
+		local newEmoteToggleKey = drawKeybindCombo("##EmoteToggleKeyInput", emoteToggleKeyStr)
 		if newEmoteToggleKey ~= emoteToggleKeyStr then
 			emoteToggleKeyStr = newEmoteToggleKey
 			config.emoteToggleKeyStr = emoteToggleKeyStr
@@ -1132,7 +1282,7 @@ function onGui()
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(100)
-		local newTeleportKey = Gui. inputText("##TeleportKeyInput", teleportKeyStr)
+		local newTeleportKey = drawKeybindCombo("##TeleportKeyInput", teleportKeyStr)
 		if newTeleportKey ~= teleportKeyStr then
 			teleportKeyStr = newTeleportKey
 			config.teleportKeyStr = teleportKeyStr
@@ -1284,10 +1434,58 @@ function onGui()
 		end
 
 		if zDriftBallOutlineEnabled then
-			Gui.beginDisabled()
 			Gui.sameLine()
-			Gui.text("The nearest ball will now use an outline.")
-			Gui.endDisabled()
+			if Gui.button(Icon.Sync .. "  Reset to default") then
+				zDriftBallSubdivision = 2
+				zDriftBallRadius = 50
+				zDriftBallThickness = 0.3
+				zDriftBallColor = LinearColor.new(1, 1, 1, 1)
+
+				config.zDriftBallSubdivision = 2
+				config.zDriftBallRadius = 50
+				config.zDriftBallThickness = 0.3
+				config.zDriftBallColor = { r = 1, g = 1, b = 1, a = 1 }
+
+				if saveConfig then saveConfig() end
+			end
+
+			local newZDriftBallSubdivision = Gui.sliderInt("Detail", zDriftBallSubdivision, 2, 4)
+			if newZDriftBallSubdivision ~= zDriftBallSubdivision then
+				zDriftBallSubdivision = newZDriftBallSubdivision
+				config.zDriftBallSubdivision = zDriftBallSubdivision
+				if saveConfig then saveConfig() end
+			end
+
+			local newZDriftBallRadius = Gui.sliderFloat("Outline size", zDriftBallRadius, 0.1, 200)
+			if newZDriftBallRadius ~= zDriftBallRadius then
+				zDriftBallRadius = newZDriftBallRadius
+				config.zDriftBallRadius = zDriftBallRadius
+				if saveConfig then saveConfig() end
+			end
+
+			local newZDriftBallThickness = Gui.sliderFloat("Line thickness", zDriftBallThickness, 0.01, 10)
+			if newZDriftBallThickness ~= zDriftBallThickness then
+				zDriftBallThickness = newZDriftBallThickness
+				config.zDriftBallThickness = zDriftBallThickness
+				if saveConfig then saveConfig() end
+			end
+
+			local newZDriftBallColor = Gui.colorEdit("Color", zDriftBallColor)
+			if newZDriftBallColor.r ~= zDriftBallColor.r
+				or newZDriftBallColor.g ~= zDriftBallColor.g
+				or newZDriftBallColor.b ~= zDriftBallColor.b
+				or newZDriftBallColor.a ~= zDriftBallColor.a then
+				zDriftBallColor = newZDriftBallColor
+				config.zDriftBallColor = {
+					r = zDriftBallColor.r,
+					g = zDriftBallColor.g,
+					b = zDriftBallColor.b,
+					a = zDriftBallColor.a,
+				}
+				if saveConfig then saveConfig() end
+			end
+
+			Gui.textDisabled("The nearest ball will use the outline")
 		end
 
 		Gui.endTabItem()
