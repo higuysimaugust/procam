@@ -3,11 +3,6 @@ Procam is a giant script combining Freecam, Handcam (Gopro/Driftvision), drawing
 
 It is *the* script to use all the time. Everything is perfected for any use-case!
 
-# READ THIS
-Downloading procam from the registry is BROKEN. It will rate-limit you due to the amount of files.
-### It's getting fixed!
-Next update, await a fix. For now, use the Discord forum post.
-
 ## Functionality
 ### GUI
   - Tabs
@@ -27,7 +22,7 @@ Next update, await a fix. For now, use the Discord forum post.
   - Teleport to new locations and set default spawn
 ### Handcam
 __Rework of Pub's DriftVision with new features!__
-  - First person, third person, handheld, floating, ball mode, manual orbit, grab camera, extend/retract, owner system, slingshot, etc!
+  - First person, third person, handheld, floating, ball mode, manual orbit, grab camera, extend/retract, owner system, throw, slingshot, etc!
 ### Settings
   - Completely re-organized and perfected
   - Collisions, Z-Drift Ball Outline, Customization, owner system, and more additions
@@ -38,6 +33,7 @@ __Rework of Pub's DriftVision with new features!__
 ### Replays
   - Manage several replays at once
   - Load, set times, unload, play, restart easily
+  - Customizable keybinds if you're pro
 ### Draw
 __Upload files to august.procam/assets__
 __Don't delete /assets/font!__
