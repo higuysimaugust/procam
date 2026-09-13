@@ -42,6 +42,9 @@ if config.showNameTags == nil then config.showNameTags = camera.showNameTags end
 camera.showNameTags = config.showNameTags
 local mutedPlayers = {}
 
+local enableShowNameTagsKey = config.enableShowNameTagsKey ~= nil and config.enableShowNameTagsKey or false
+local showNameTagsKeyStr = config.showNameTagsKeyStr or "I"
+
 local screenshotWidth = config.screenshotWidth or 1920
 local screenshotHeight = config.screenshotHeight or 1080
 local screenshotSuccessTimer = 0
@@ -355,7 +358,7 @@ local emoteCycleInterval = config.emoteCycleInterval or 1.0
 local timer = 0
 
 local zDriftBallOutlineEnabled = config.zDriftBallOutlineEnabled or false
-local zDriftBallSubdivision = math.clamp(config.zDriftBallSubdivision or 3, 3, 4)
+local zDriftBallSubdivision = math.clamp(config.zDriftBallSubdivision or 2, 3, 4)
 local zDriftBallRadius = config.zDriftBallRadius or config.zDriftBallScale or 37
 local zDriftBallThickness = config.zDriftBallThickness or 1
 local savedZDriftBallColor = config.zDriftBallColor
@@ -641,7 +644,8 @@ local function drawZDriftBallOutline()
 end
 
 local function snapToGravity()
-	if isInsideGravityRegion(camera.position) then
+	local mapType = detectMapType()
+	if mapType == "Orion" and isInsideGravityRegion(camera.position) then
 		gravityTarget = getRaycastGravityRotation() or gravity.upRotation
 	else
 		gravityTarget = gravity.upRotation
@@ -1141,6 +1145,30 @@ function onGui()
 		Gui.separatorText("Keybinds")
 		Gui.textDisabled("Select a keyboard, mouse, or controller keybind.")
 
+		enableShowNameTagsKey = Gui.checkbox(Icon.Eye .. "  Toggle name tags", enableShowNameTagsKey)
+		if enableShowNameTagsKey ~= config.enableShowNameTagsKey then
+			config.enableShowNameTagsKey = enableShowNameTagsKey
+			if saveConfig then saveConfig() end
+		end
+		Gui.sameLine()
+		if not enableShowNameTagsKey then
+			Gui.beginDisabled()
+		end
+		Gui.setNextItemWidth(180)
+		local newShowNameTagsKey = drawKeybindCombo("##ShowNameTagsKeyInput", showNameTagsKeyStr)
+		if newShowNameTagsKey ~= showNameTagsKeyStr then
+			showNameTagsKeyStr = newShowNameTagsKey
+			config.showNameTagsKeyStr = showNameTagsKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if not enableShowNameTagsKey then
+			Gui.endDisabled()
+		end
+		if parseKeyStr(showNameTagsKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
 		enableScreenshotKey = Gui.checkbox(Icon.Camera .. "  Screenshot", enableScreenshotKey)
 		if enableScreenshotKey ~= config.enableScreenshotKey then
 			config.enableScreenshotKey = enableScreenshotKey
@@ -1371,40 +1399,13 @@ function onGui()
 
 		Gui.newLine()
 
-		Gui.separatorText("Other")
+		Gui.separatorText("Ball")
 
-		local newCollisionEnabled = Gui.checkbox("Enable Collisions", collisionEnabled)
-		if newCollisionEnabled ~= collisionEnabled then
-			collisionEnabled = newCollisionEnabled
-			config.collisionEnabled = collisionEnabled
-			if saveConfig then saveConfig() end
-		end
-		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
-		if newShowAxisDebug ~= config.showAxisDebug then
-			config.showAxisDebug = newShowAxisDebug
-			if saveConfig then saveConfig() end
-		end
-
-		local newShowLocationWriter = Gui.checkbox("Show Location Writer##debugShowLocationWriter", showLocationWriter)
-		if newShowLocationWriter ~= showLocationWriter then
-			showLocationWriter = newShowLocationWriter
-			config.showLocationWriter = showLocationWriter
-			if saveConfig then saveConfig() end
-		end
-
-		local newGoalExplosions = Gui.checkbox("Goal explosions", Inputs.playGoalExplosions)
-		if newGoalExplosions ~= Inputs.playGoalExplosions then
-			Inputs.playGoalExplosions = newGoalExplosions
-			config.playGoalExplosions = newGoalExplosions
-			spectatorDebug.goalExplosions = Inputs.playGoalExplosions
-			if saveConfig then saveConfig() end
-		end
-
-		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
-		if newScraprunSpinners ~= Inputs.playScraprunSpinners then
-			Inputs.playScraprunSpinners = newScraprunSpinners
-			config.playScraprunSpinners = newScraprunSpinners
-			spectatorDebug.scrapRunSpinners = Inputs.playScraprunSpinners
+		local newBallScaleMultiplier = Gui.sliderFloat("Ball scale multiplier", Inputs.ballScaleMultiplier, 0, 10)
+		if newBallScaleMultiplier ~= Inputs.ballScaleMultiplier then
+			Inputs.ballScaleMultiplier = newBallScaleMultiplier
+			config.ballScaleMultiplier = newBallScaleMultiplier
+			spectatorDebug.replayBallScaleMultiplier = Inputs.ballScaleMultiplier
 			if saveConfig then saveConfig() end
 		end
 
@@ -1416,13 +1417,11 @@ function onGui()
 			if saveConfig then saveConfig() end
 		end
 
-		Gui.separatorText("Ball")
-
-		local newBallScaleMultiplier = Gui.sliderFloat("Ball scale multiplier", Inputs.ballScaleMultiplier, 0, 10)
-		if newBallScaleMultiplier ~= Inputs.ballScaleMultiplier then
-			Inputs.ballScaleMultiplier = newBallScaleMultiplier
-			config.ballScaleMultiplier = newBallScaleMultiplier
-			spectatorDebug.replayBallScaleMultiplier = Inputs.ballScaleMultiplier
+		local newGoalExplosions = Gui.checkbox("Goal explosions", Inputs.playGoalExplosions)
+		if newGoalExplosions ~= Inputs.playGoalExplosions then
+			Inputs.playGoalExplosions = newGoalExplosions
+			config.playGoalExplosions = newGoalExplosions
+			spectatorDebug.goalExplosions = Inputs.playGoalExplosions
 			if saveConfig then saveConfig() end
 		end
 
@@ -1486,6 +1485,37 @@ function onGui()
 			end
 
 			Gui.textDisabled("The nearest ball will use the outline")
+		end
+
+		Gui.newLine()
+
+		Gui.separatorText("Debug")
+
+		local newCollisionEnabled = Gui.checkbox("Enable Collisions", collisionEnabled)
+		if newCollisionEnabled ~= collisionEnabled then
+			collisionEnabled = newCollisionEnabled
+			config.collisionEnabled = collisionEnabled
+			if saveConfig then saveConfig() end
+		end
+		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
+		if newShowAxisDebug ~= config.showAxisDebug then
+			config.showAxisDebug = newShowAxisDebug
+			if saveConfig then saveConfig() end
+		end
+
+		local newShowLocationWriter = Gui.checkbox("Show Location Writer##debugShowLocationWriter", showLocationWriter)
+		if newShowLocationWriter ~= showLocationWriter then
+			showLocationWriter = newShowLocationWriter
+			config.showLocationWriter = showLocationWriter
+			if saveConfig then saveConfig() end
+		end
+
+		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
+		if newScraprunSpinners ~= Inputs.playScraprunSpinners then
+			Inputs.playScraprunSpinners = newScraprunSpinners
+			config.playScraprunSpinners = newScraprunSpinners
+			spectatorDebug.scrapRunSpinners = Inputs.playScraprunSpinners
+			if saveConfig then saveConfig() end
 		end
 
 		Gui.endTabItem()
@@ -1707,6 +1737,16 @@ function onGui()
 end
 
 function tick(dt)
+	if enableShowNameTagsKey and parseKeyStr(showNameTagsKeyStr) and Input.getKeyDown(parseKeyStr(showNameTagsKeyStr)) then
+		camera.showNameTags = not camera.showNameTags
+		config.showNameTags = camera.showNameTags
+		if saveConfig then saveConfig() end
+	end
+
+	if Replays and Replays.tick then
+		Replays.tick(dt)
+	end
+
 	if pendingGravitySnap then
 		ntimer += dt
 		snapToGravity()
@@ -1721,8 +1761,9 @@ function tick(dt)
 	drawZDriftBallOutline()
 	timer = timer + dt
 
+	local mapType = detectMapType()
 	local insideGravityRegion = isInsideGravityRegion(camera.position)
-	if insideGravityRegion then
+	if mapType == "Orion" and insideGravityRegion then
 		if Inputs.alignToGravity then
 			gravityRegionTimer += dt
 			if gravityRegionTimer >= 1 then
@@ -1759,7 +1800,7 @@ function tick(dt)
 			if Axis.isEnabled then
 				Axis.isEnabled = false
 				Axis.onUnload()
-				Util.setSmoothing(Inputs.smoothing, Inputs)
+				Util.clearAxisSmoothing(Inputs)
 			end
 		end
 	end
@@ -1778,7 +1819,7 @@ function tick(dt)
 		if Axis.isEnabled then
 			Axis.isEnabled = false
 			Axis.onUnload()
-			Util.setSmoothing(Inputs.smoothing, Inputs)
+			Util.clearAxisSmoothing(Inputs)
 		else
 			Axis.isEnabled = true
 			Axis.onLoad()
