@@ -23,6 +23,7 @@ It is *the* script to use all the time. Everything is perfected for any use-case
 ### Handcam
 __Rework of Pub's DriftVision with new features!__
   - First person, third person, handheld, floating, ball mode, manual orbit, grab camera, extend/retract, owner system, throw, slingshot, etc!
+  - Scraprun mode: follow the furthest runner in scraprun!
 ### Settings
   - Completely re-organized and perfected
   - Collisions, Z-Drift Ball Outline, Customization, owner system, and more additions
