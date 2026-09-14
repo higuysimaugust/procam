@@ -10,8 +10,6 @@ return {
 	gravityAlignedMovementModifier = Input.Key.LeftAlt,
 	localMovementAxesDefault = true,
 
-	snapToGravityKey = Input.Key.SpaceBar,
-
 	pitchUpKey = Input.Key.Up,
 	pitchDownKey = Input.Key.Down,
 	yawLeftKey = Input.Key.Left,
@@ -22,7 +20,6 @@ return {
 	rollRightGp = Input.Gamepad.DPad_Right,
 	rollResetTolerance = 5,
 	resetRollGp = Input.Gamepad.LeftThumbstick,
-	alignToGravityGp = Input.Gamepad.RightThumbstick,
 	toggleSmoothingGp = Input.Gamepad.FaceButton_Right,
 	frontflipGp = Input.Gamepad.FaceButton_Top,
 	backflipGp = Input.Gamepad.FaceButton_Bottom,

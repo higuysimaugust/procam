@@ -38,12 +38,19 @@ Inputs.playScraprunSpinners = config.playScraprunSpinners ~= nil and config.play
 if config.placeBallEnabled == nil then config.placeBallEnabled = true end
 Inputs.placeBallEnabled = config.placeBallEnabled
 Inputs.ballScaleMultiplier = config.ballScaleMultiplier or Inputs.ballScaleMultiplier
-if config.showNameTags == nil then config.showNameTags = camera.showNameTags end
+if config.showNameTags == nil then
+	config.showNameTags = camera.showNameTags
+end
 camera.showNameTags = config.showNameTags
-local mutedPlayers = {}
 
 local enableShowNameTagsKey = config.enableShowNameTagsKey ~= nil and config.enableShowNameTagsKey or false
 local showNameTagsKeyStr = config.showNameTagsKeyStr or "I"
+
+local enableAlignToGravityKey = config.enableAlignToGravityKey
+if enableAlignToGravityKey == nil then
+	enableAlignToGravityKey = true
+end
+local alignToGravityKeyStr = config.alignToGravityKeyStr or "SpaceBar"
 
 local screenshotWidth = config.screenshotWidth or 1920
 local screenshotHeight = config.screenshotHeight or 1080
@@ -114,6 +121,8 @@ local function parseKeyStr(keyStr: string)
 		ControllerDPadRight = Input.Gamepad.DPad_Right,
 		ControllerLeftStickClick = Input.Gamepad.LeftThumbstick,
 		ControllerRightStickClick = Input.Gamepad.RightThumbstick,
+		Space = Input.Key.Space,
+		SpaceBar = Input.Key.Space,
 	}
 
 	if aliasMap[normalizedKeyStr] then
@@ -741,10 +750,10 @@ function onGui()
 	if Gui.beginTabItem(getTabTitle(Icon.Home, "Home")) then
 		Gui.separatorText("Quick Settings")
 
-		local newShowNameTags = Gui.checkbox("Show name tags", camera.showNameTags)
-		if newShowNameTags ~= camera.showNameTags then
-			camera.showNameTags = newShowNameTags
+		local newShowNameTags = Gui.checkbox("Show name tags", config.showNameTags)
+		if newShowNameTags ~= config.showNameTags then
 			config.showNameTags = newShowNameTags
+			camera.showNameTags = config.showNameTags
 			if saveConfig then saveConfig() end
 		end
 		local newAlignToGravity = Gui.checkbox("Automatically Align to Gravity", Inputs.alignToGravity)
@@ -752,6 +761,14 @@ function onGui()
 			Inputs.alignToGravity = newAlignToGravity
 			config.alignToGravity = newAlignToGravity
 			if saveConfig then saveConfig() end
+		end
+		if detectMapType() == "Orion" and isInsideGravityRegion(camera.position) then
+			Gui.sameLine()
+			local zeroGHint = "Suggested to turn off while in Zero-G"
+			if enableAlignToGravityKey and parseKeyStr(alignToGravityKeyStr) ~= nil then
+				zeroGHint = zeroGHint .. ", use " .. alignToGravityKeyStr .. " to align to gravity"
+			end
+			Gui.textDisabled(zeroGHint)
 		end
 		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
 		local newLocalMovementAxes = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
@@ -1131,7 +1148,6 @@ function onGui()
 				addRow("Pan", "Mouse", "Right Stick")
 				addRow("Roll", "Hold Right Click", "D-Pad Left and Right")
 				addRow("Reset Roll", "Middle Mouse Click", "Left Stick Click")
-				addRow("Align to Gravity", "Spacebar", "Right Stick Click")
 				addRow("Frontflip", "Arrow Up", "Y / Face Up")
 				addRow("Backflip", "Arrow Down", "A / Face Down")
 				addRow("Toggle Smoothing", "Caps Lock", "B / Face Right")
@@ -1165,6 +1181,30 @@ function onGui()
 			Gui.endDisabled()
 		end
 		if parseKeyStr(showNameTagsKeyStr) == nil then
+			Gui.sameLine()
+			Gui.textDisabled("Invalid key")
+		end
+
+		enableAlignToGravityKey = Gui.checkbox(Icon.ArrowDown .. "  Align to gravity", enableAlignToGravityKey)
+		if enableAlignToGravityKey ~= config.enableAlignToGravityKey then
+			config.enableAlignToGravityKey = enableAlignToGravityKey
+			if saveConfig then saveConfig() end
+		end
+		Gui.sameLine()
+		if not enableAlignToGravityKey then
+			Gui.beginDisabled()
+		end
+		Gui.setNextItemWidth(180)
+		local newAlignToGravityKey = drawKeybindCombo("##AlignToGravityKeyInput", alignToGravityKeyStr)
+		if newAlignToGravityKey ~= alignToGravityKeyStr then
+			alignToGravityKeyStr = newAlignToGravityKey
+			config.alignToGravityKeyStr = alignToGravityKeyStr
+			if saveConfig then saveConfig() end
+		end
+		if not enableAlignToGravityKey then
+			Gui.endDisabled()
+		end
+		if parseKeyStr(alignToGravityKeyStr) == nil then
 			Gui.sameLine()
 			Gui.textDisabled("Invalid key")
 		end
@@ -1623,30 +1663,7 @@ function onGui()
                 if targetPos then camera.position = targetPos end
             end
 
-            if readLocation == 0 then
-                Gui.sameLine()
-
-                local targetName = selectedPlayerObj.playerName or ""
-                local isMuted = mutedPlayers[targetName] or false
-                local muteIcon = isMuted and (Icon.VolumeUp or "") or (Icon.VolumeMute or "")
-                local buttonText = isMuted and (muteIcon .. "  Unmute") or (muteIcon .. "  Mute")
-
-                if Gui.button(buttonText .. "##Mute_" .. targetName) then
-                    local newState = not isMuted
-                    local success = Settings.mutePlayerByName(targetName, newState)
-                    if success then
-                        mutedPlayers[targetName] = newState
-                    end
-                end
-            else
-				Gui.sameLine()
-				Gui.beginDisabled()
-				Gui.button(Icon.VolumeMute .. "  Mute")
-				Gui.setItemTooltip("You can't mute players from replays!")
-				Gui.endDisabled()
-			end
-
-			Gui.sameLine()
+            Gui.sameLine()
 
 			if Gui.button(Icon.ChevronRight .. "  Start Handcam following") then
 				config.currentPlayerId = selectedPlayerTarget.id
@@ -1738,8 +1755,8 @@ end
 
 function tick(dt)
 	if enableShowNameTagsKey and parseKeyStr(showNameTagsKeyStr) and Input.getKeyDown(parseKeyStr(showNameTagsKeyStr)) then
-		camera.showNameTags = not camera.showNameTags
-		config.showNameTags = camera.showNameTags
+		config.showNameTags = not config.showNameTags
+		camera.showNameTags = config.showNameTags
 		if saveConfig then saveConfig() end
 	end
 
@@ -2016,7 +2033,8 @@ function tick(dt)
 			gravityChaser = nextGravityChaser
 		end
 	end
-	if Input.getKeyDown(Inputs.snapToGravityKey) or Input.getKeyDown(Inputs.alignToGravityGp) then
+	local configuredAlignToGravityKey = enableAlignToGravityKey and parseKeyStr(alignToGravityKeyStr) or nil
+	if enableAlignToGravityKey and configuredAlignToGravityKey and Input.getKeyDown(configuredAlignToGravityKey) then
 		snapToGravity()
 	end
 

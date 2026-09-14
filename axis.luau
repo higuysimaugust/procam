@@ -1162,6 +1162,20 @@ local function isPointInsideOrientedBox(point, cube)
         and math.abs(z) <= cube.scale.z * 0.5
 end
 
+local function shouldInvertScraprunCubeAxis(cube)
+    if not cube or not cube.name then
+        return false
+    end
+    return cube.name == "Cube_1" or cube.name == "Cube_3" or cube.name == "Cube_4"
+end
+
+local function invertScraprunProgressIfNeeded(cube, progress)
+    if shouldInvertScraprunCubeAxis(cube) then
+        return 1 - progress
+    end
+    return progress
+end
+
 local function getScraprunProgress(point, cube)
     if not point or not cube or not cube.position or not cube.rotation or not cube.scale then
         return nil
@@ -1181,7 +1195,7 @@ local function getScraprunProgress(point, cube)
         local progress = (coord + cube.scale.y * 0.5) / cube.scale.y
         if progress < 0 then progress = 0 end
         if progress > 1 then progress = 1 end
-        return progress
+        return invertScraprunProgressIfNeeded(cube, progress)
     end
 
     if cube.scale.x >= cube.scale.z then
@@ -1191,14 +1205,14 @@ local function getScraprunProgress(point, cube)
         local progress = (coord + length * 0.5) / length
         if progress < 0 then progress = 0 end
         if progress > 1 then progress = 1 end
-        return progress
+        return invertScraprunProgressIfNeeded(cube, progress)
     end
 
     local coord = Vec3.dot(dx, xAxis)
     local progress = (coord + cube.scale.x * 0.5) / cube.scale.x
     if progress < 0 then progress = 0 end
     if progress > 1 then progress = 1 end
-    return progress
+    return invertScraprunProgressIfNeeded(cube, progress)
 end
 
 local function getBestScraprunPlayer()
@@ -1248,6 +1262,13 @@ end
 local function updateScraprunFollow(dt)
     local best = getBestScraprunPlayer()
     if not best or not best.player then
+        if camera then
+            camera.position = Vec3.new(-16749.119, 5031.522, 28948.580)
+            camera.rotation = Quat.fromEuler(210, 0, -270.465)
+            camera.hideNearestHead = false
+            camera.positionSmoothing = 0
+            camera.rotationSmoothing = 0
+        end
         return
     end
 
@@ -1256,22 +1277,37 @@ local function updateScraprunFollow(dt)
     selectedPlayerTarget = { id = best.id, sessionIndex = best.sessionIndex }
     if saveConfig then saveConfig() end
 
-    viewpointMode = false
-    thirdPersonMode = false
     manualOrbitMode = false
-    cameraInHand = true
-    handHolding = "right"
+    cameraInHand = false
+    handHolding = nil
     freeFloatingMode = false
     ballMode = false
     shoulderMode = false
     shoulderSide = "right"
+    thrownMode = false
+    facingUser = true
+    viewFlipped = false
 
-    camera.position = best.player.head.position
-    camera.rotation = best.player.head.rotation
-    camera.hideNearestHead = config.hideHead
-    camera.positionSmoothing = 0
-    camera.rotationSmoothing = 0
-    updateNameTagsVisibility()
+    if thirdPersonMode then
+        viewpointMode = false
+        thirdPersonMode = true
+        updateThirdPersonMode(best.player, dt)
+        return
+    end
+
+    viewpointMode = true
+    thirdPersonMode = false
+
+    if best.player and best.player.head then
+        setViewpointMode(best.player)
+    else
+        camera.position = Vec3.new(-16749.119, 5031.522, 28948.580)
+        camera.rotation = Quat.fromEuler(0, 0, -270.465)
+        camera.hideNearestHead = config.hideHead
+        camera.positionSmoothing = 0
+        camera.rotationSmoothing = 0
+        updateNameTagsVisibility()
+    end
 end
 
 local function getNearestSurfaceFloor(position, maxDistance)
@@ -1573,89 +1609,120 @@ local function drawHomeTab()
     Gui.separatorText(Icon.Camera .. "  Camera Mode")
     local currentPlayer = getPlayerByTarget(getCurrentTarget())
 
-    if viewpointMode then
-        Gui.beginDisabled()
-    end
-    if Gui.button("First Person Mode") then
-        if currentPlayer then
-            facingUser = true
-            viewFlipped = false
-            currentExtension = config.minExtension
-            targetExtension = config.minExtension
-            setViewpointMode(currentPlayer)
+    if config.followBestScraprunPlayer then
+        -- In Scraprun mode only the automatic first-person path and an explicitly
+        -- manually chosen third-person path are allowed. Other view modes are blocked.
+        if Gui.button("First Person Mode") then
+            if currentPlayer then
+                facingUser = true
+                viewFlipped = false
+                currentExtension = config.minExtension
+                targetExtension = config.minExtension
+                setViewpointMode(currentPlayer)
+            end
         end
-    end
-    if viewpointMode then
-        Gui.endDisabled()
-    end
-    Gui.setItemTooltip("Attach the camera to the selected player's head.")
+        Gui.setItemTooltip("Attach the camera to the selected player's head.")
 
-    Gui.sameLine()
+        Gui.sameLine()
 
-    if thirdPersonMode then
-        Gui.beginDisabled()
-    end
-    if Gui.button("Third Person Mode") then
-        if currentPlayer then
-            setThirdPersonMode(currentPlayer)
+        if Gui.button("Third Person Mode") then
+            if currentPlayer then
+                setThirdPersonMode(currentPlayer)
+            end
         end
-    end
-    if thirdPersonMode then
-        Gui.endDisabled()
-    end
-    Gui.setItemTooltip("Track the selected player from behind.")
+        Gui.setItemTooltip("Track the selected player from behind.")
 
-    Gui.sameLine()
+        Gui.sameLine()
 
-    if manualOrbitMode then
-        Gui.beginDisabled()
-    end
-    if Gui.button("Manual Orbit") then
-        if currentPlayer then
-            setManualOrbitMode(currentPlayer)
+        if not currentPlayer then
+            Gui.newLine()
+            Gui.textDisabled("Select a player first")
         end
-    end
-    if manualOrbitMode then
-        Gui.endDisabled()
-    end
-    Gui.setItemTooltip("Manually orbit around the selected player using WASD and Mouse.")
-
-    local leftShoulderDisabled = shoulderMode and shoulderSide == "left"
-    local rightShoulderDisabled = shoulderMode and shoulderSide == "right"
-
-    if leftShoulderDisabled then
-        Gui.beginDisabled()
-    end
-    if Gui.button("Left Shoulder") then
-        if currentPlayer then
-            setShoulderMode(currentPlayer, "left")
+    else
+        if viewpointMode then
+            Gui.beginDisabled()
         end
-    end
-    if leftShoulderDisabled then
-        Gui.endDisabled()
-    end
-    Gui.setItemTooltip("Rests camera at left shoulder")
-
-    Gui.sameLine()
-
-    if rightShoulderDisabled then
-        Gui.beginDisabled()
-    end
-    if Gui.button("Right Shoulder") then
-        if currentPlayer then
-            setShoulderMode(currentPlayer, "right")
+        if Gui.button("First Person Mode") then
+            if currentPlayer then
+                facingUser = true
+                viewFlipped = false
+                currentExtension = config.minExtension
+                targetExtension = config.minExtension
+                setViewpointMode(currentPlayer)
+            end
         end
-    end
-    if rightShoulderDisabled then
-        Gui.endDisabled()
-    end
-    Gui.setItemTooltip("Rests camera at right shoulder")
+        if viewpointMode then
+            Gui.endDisabled()
+        end
+        Gui.setItemTooltip("Attach the camera to the selected player's head.")
 
-    Gui.sameLine()
+        Gui.sameLine()
 
-    if not currentPlayer then
-        Gui.newLine()
-        Gui.textDisabled("Select a player first")
+        if thirdPersonMode then
+            Gui.beginDisabled()
+        end
+        if Gui.button("Third Person Mode") then
+            if currentPlayer then
+                setThirdPersonMode(currentPlayer)
+            end
+        end
+        if thirdPersonMode then
+            Gui.endDisabled()
+        end
+        Gui.setItemTooltip("Track the selected player from behind.")
+
+        Gui.sameLine()
+
+        if manualOrbitMode then
+            Gui.beginDisabled()
+        end
+        if Gui.button("Manual Orbit") then
+            if currentPlayer then
+                setManualOrbitMode(currentPlayer)
+            end
+        end
+        if manualOrbitMode then
+            Gui.endDisabled()
+        end
+        Gui.setItemTooltip("Manually orbit around the selected player using WASD and Mouse.")
+
+        local leftShoulderDisabled = shoulderMode and shoulderSide == "left"
+        local rightShoulderDisabled = shoulderMode and shoulderSide == "right"
+
+        if leftShoulderDisabled then
+            Gui.beginDisabled()
+        end
+        if Gui.button("Left Shoulder") then
+            if currentPlayer then
+                setShoulderMode(currentPlayer, "left")
+            end
+        end
+        if leftShoulderDisabled then
+            Gui.endDisabled()
+        end
+        Gui.setItemTooltip("Rests camera at left shoulder")
+
+        Gui.sameLine()
+
+        if rightShoulderDisabled then
+            Gui.beginDisabled()
+        end
+        if Gui.button("Right Shoulder") then
+            if currentPlayer then
+                setShoulderMode(currentPlayer, "right")
+            end
+        end
+        if rightShoulderDisabled then
+            Gui.endDisabled()
+        end
+        Gui.setItemTooltip("Rests camera at right shoulder")
+
+        Gui.sameLine()
+
+        if not currentPlayer then
+            Gui.newLine()
+            Gui.textDisabled("Select a player first")
+        end
     end
 end
 
@@ -1718,7 +1785,7 @@ local function drawSettingsTab()
         changed = true
     end
 
-    local newCameraSmoothness = Gui.sliderFloat("Camera Smoothness", config.cameraSmoothness, 0, 1)
+    local newCameraSmoothness = Gui.sliderFloat("Camera Smoothness", config.cameraSmoothness, 0, 0.5)
     if newCameraSmoothness ~= config.cameraSmoothness then
         config.cameraSmoothness = newCameraSmoothness
         if thirdPersonMode or manualOrbitMode then
@@ -1759,6 +1826,8 @@ local function drawSettingsTab()
         Gui.endCombo()
     end
 
+    Gui.separatorText("Camera")
+
     local newFlipEnabled = Gui.checkbox("Enable Camera Flipping", config.flipEnabled)
     if newFlipEnabled ~= config.flipEnabled then
         config.flipEnabled = newFlipEnabled
@@ -1771,213 +1840,244 @@ local function drawSettingsTab()
         changed = true
     end
 
+    local newRequireTwoHandsRecall = Gui.checkbox("Require 2 hands to Recall", config.requireTwoHandsRecall)
+    if newRequireTwoHandsRecall ~= config.requireTwoHandsRecall then
+        config.requireTwoHandsRecall = newRequireTwoHandsRecall
+        changed = true
+    end
+
+    local newEnableGripModeToggle = Gui.checkbox("Enable Mode Toggle", config.enableGripModeToggle)
+    if newEnableGripModeToggle ~= config.enableGripModeToggle then
+        config.enableGripModeToggle = newEnableGripModeToggle
+        changed = true
+    end
+
+    Gui.sameLine()
+    Gui.textDisabled("Hold Grip to change between first and third person mode")
+
+    local newOwnerRecallTime = Gui.sliderFloat("Owner Recall Time", config.ownerRecallTime, 0.5, 5.0)
+    if newOwnerRecallTime ~= config.ownerRecallTime then
+        config.ownerRecallTime = newOwnerRecallTime
+        changed = true
+    end
+
+    Gui.sameLine()
+    Gui.textDisabled("(sec)")
+
+    if config.enableGripModeToggle then
+        local newGripToggleDelayTime = Gui.sliderFloat("Mode Toggle Time", config.gripToggleDelayTime, 0.0, 2.0)
+        if newGripToggleDelayTime ~= config.gripToggleDelayTime then
+            config.gripToggleDelayTime = newGripToggleDelayTime
+            changed = true
+        end
+    end
+
+    Gui.sameLine()
+    Gui.textDisabled("(sec)")
+
+    local newGrabDelayTime = Gui.sliderFloat("Grab Delay Time", config.grabDelayTime, 0.5, 3.0)
+    if newGrabDelayTime ~= config.grabDelayTime then
+        config.grabDelayTime = newGrabDelayTime
+        changed = true
+    end
+
+    Gui.sameLine()
+    Gui.textDisabled("(sec)")
+
     Gui.newLine()
 
-    if Gui.collapsingHeader("Viewpoint") then
-
-        local newNearClip = Gui.sliderFloat("near clipping plane", config.nearClip, 0.1, 100)
-        if newNearClip ~= config.nearClip then
-            config.nearClip = newNearClip
-            changed = true
-        end
-
-        Gui.text("view offset:")
-        local newViewOffset = Gui.dragFloat3("view offset", config.viewpointOffset, 0.1, -10, 10)
-        if newViewOffset
-            and (
-                newViewOffset.x ~= config.viewpointOffset.x
-                or newViewOffset.y ~= config.viewpointOffset.y
-                or newViewOffset.z ~= config.viewpointOffset.z
-            )
-        then
-            config.viewpointOffset = newViewOffset
-            changed = true
-        end
-
+    Gui.separatorText("Throw")
+    local newThrowThreshold = Gui.sliderFloat("Throw velocity", config.throwThreshold, 50, 1000)
+    if newThrowThreshold ~= config.throwThreshold then
+        config.throwThreshold = newThrowThreshold
+        changed = true 
     end
 
-    if Gui.collapsingHeader("Manual Orbit") then
-        local newOrbitRadius = Gui.sliderFloat("orbit radius", config.orbitRadius, 10, 1000)
-        if newOrbitRadius ~= config.orbitRadius then
-            config.orbitRadius = newOrbitRadius
-            changed = true
-        end
-
-        local newOrbitRotSpeed = Gui.sliderFloat("rotation speed", config.orbitRotSpeed, 50, 360)
-        if newOrbitRotSpeed ~= config.orbitRotSpeed then
-            config.orbitRotSpeed = newOrbitRotSpeed
-            changed = true
-        end
-
-        local newOrbitMouseSensitivity = Gui.sliderFloat("mouse sensitivity", config.orbitMouseSensitivity, 0.5, 10.0)
-        if newOrbitMouseSensitivity ~= config.orbitMouseSensitivity then
-            config.orbitMouseSensitivity = newOrbitMouseSensitivity
-            changed = true
-        end
-
-        local newOrbitMouseWheelSensitivity = Gui.sliderFloat("scroll sensitivity", config.orbitMouseWheelSensitivity, 10, 150)
-        if newOrbitMouseWheelSensitivity ~= config.orbitMouseWheelSensitivity then
-            config.orbitMouseWheelSensitivity = newOrbitMouseWheelSensitivity
-            changed = true
-        end
-    end
-
-    if Gui.collapsingHeader("Interaction") then
-
-        local newRequireTwoHandsRecall = Gui.checkbox("require 2 hands to recall", config.requireTwoHandsRecall)
-        if newRequireTwoHandsRecall ~= config.requireTwoHandsRecall then
-            config.requireTwoHandsRecall = newRequireTwoHandsRecall
-            changed = true
-        end
-
-        local newOwnerRecallTime = Gui.sliderFloat("owner recall time (sec)", config.ownerRecallTime, 0.5, 5.0)
-        if newOwnerRecallTime ~= config.ownerRecallTime then
-            config.ownerRecallTime = newOwnerRecallTime
-            changed = true
-        end
-
-        local newEnableGripModeToggle = Gui.checkbox("enable grip first/third person toggle", config.enableGripModeToggle)
-        if newEnableGripModeToggle ~= config.enableGripModeToggle then
-            config.enableGripModeToggle = newEnableGripModeToggle
-            changed = true
-        end
-
-        if config.enableGripModeToggle then
-            local newGripToggleDelayTime = Gui.sliderFloat("grip toggle delay time (sec)", config.gripToggleDelayTime, 0.0, 2.0)
-            if newGripToggleDelayTime ~= config.gripToggleDelayTime then
-                config.gripToggleDelayTime = newGripToggleDelayTime
-                changed = true
-            end
-        end
-
-        local newHeadGrabRadius = Gui.sliderFloat("head grab range", config.headGrabRadius, 10, 100)
-        if newHeadGrabRadius ~= config.headGrabRadius then
-            config.headGrabRadius = newHeadGrabRadius
-            changed = true
-        end
-
-        local newHeadDropRadius = Gui.sliderFloat("head drop range", config.headDropRadius, 10, 50)
-        if newHeadDropRadius ~= config.headDropRadius then
-            config.headDropRadius = newHeadDropRadius
-            changed = true
-        end
-
-        local newCameraGrabRadius = Gui.sliderFloat("camera grab range", config.cameraGrabRadius, 10, 100)
-        if newCameraGrabRadius ~= config.cameraGrabRadius then
-            config.cameraGrabRadius = newCameraGrabRadius
-            changed = true
-        end
-
-        local newGrabDelayTime = Gui.sliderFloat("grab delay time (sec)", config.grabDelayTime, 0.5, 3.0)
-        if newGrabDelayTime ~= config.grabDelayTime then
-            config.grabDelayTime = newGrabDelayTime
-            changed = true
-        end
-    end
-
-    if Gui.collapsingHeader("Third Person") then
-        local newThirdPersonDistance = Gui.sliderFloat("camera distance", config.thirdPersonDistance, 50, 500)
-        if newThirdPersonDistance ~= config.thirdPersonDistance then
-            config.thirdPersonDistance = newThirdPersonDistance
-            changed = true
-        end
-
-        Gui.separatorText("extension arm")
-        local newExtensionEnabled = Gui.checkbox("enable extension arm", config.extensionEnabled)
-        if newExtensionEnabled ~= config.extensionEnabled then
-            config.extensionEnabled = newExtensionEnabled
-            changed = true
-        end
-
-        if config.extensionEnabled then
-            local newMinExtension = Gui.sliderFloat("minimum extension", config.minExtension, 0, 50)
-            if newMinExtension ~= config.minExtension then
-                config.minExtension = newMinExtension
-                changed = true
-            end
-
-            local newMaxExtension = Gui.sliderFloat("maximum extension", config.maxExtension, 50, 500)
-            if newMaxExtension ~= config.maxExtension then
-                config.maxExtension = newMaxExtension
-                changed = true
-            end
-
-            local newExtensionStep = Gui.sliderFloat("extension speed", config.extensionStep, 0.5, 20)
-            if newExtensionStep ~= config.extensionStep then
-                config.extensionStep = newExtensionStep
-                changed = true
-            end
-
-            local newExtensionSmoothness = Gui.sliderFloat("extension smoothing", config.extensionSmoothness, 0, 0.95)
-            if newExtensionSmoothness ~= config.extensionSmoothness then
-                config.extensionSmoothness = newExtensionSmoothness
-                changed = true
-            end
-        end
-    end
-
-    if Gui.collapsingHeader("Throwing") then
-        local newThrowThreshold = Gui.sliderFloat("throw velocity threshold", config.throwThreshold, 50, 1000)
-        if newThrowThreshold ~= config.throwThreshold then
-            config.throwThreshold = newThrowThreshold
-            changed = true 
-        end
-
-        local newThrowGravity = Gui.sliderFloat("throw gravity", config.throwGravity, 100, 3000)
-        if newThrowGravity ~= config.throwGravity then
-            config.throwGravity = newThrowGravity
-            changed = true
-        end
+    local newThrowGravity = Gui.sliderFloat("Throw gravity", config.throwGravity, 100, 3000)
+    if newThrowGravity ~= config.throwGravity then
+        config.throwGravity = newThrowGravity
+        changed = true
     end
    
-    if Gui.collapsingHeader("Slingshot") then
-        local newSlingshotEnabled = Gui.checkbox("enable slingshot", config.slingshotEnabled)
-        if newSlingshotEnabled ~= config.slingshotEnabled then
-            config.slingshotEnabled = newSlingshotEnabled
+    Gui.newLine()
+
+    Gui.separatorText("Range")
+    
+    local newHeadGrabRadius = Gui.sliderFloat("Head Grab Range", config.headGrabRadius, 10, 100)
+    if newHeadGrabRadius ~= config.headGrabRadius then
+        config.headGrabRadius = newHeadGrabRadius
+        changed = true
+    end
+
+    local newHeadDropRadius = Gui.sliderFloat("Head Drop Range", config.headDropRadius, 10, 50)
+    if newHeadDropRadius ~= config.headDropRadius then
+        config.headDropRadius = newHeadDropRadius
+        changed = true
+    end
+
+    local newCameraGrabRadius = Gui.sliderFloat("Camera Grab Range", config.cameraGrabRadius, 10, 100)
+    if newCameraGrabRadius ~= config.cameraGrabRadius then
+        config.cameraGrabRadius = newCameraGrabRadius
+        changed = true
+    end
+
+    Gui.newLine()
+
+    Gui.separatorText("Third Person")
+    local newThirdPersonDistance = Gui.sliderFloat("Camera Distance", config.thirdPersonDistance, 50, 500)
+    if newThirdPersonDistance ~= config.thirdPersonDistance then
+        config.thirdPersonDistance = newThirdPersonDistance
+        changed = true
+    end
+
+    local newExtensionEnabled = Gui.checkbox("Enable Extension Arm", config.extensionEnabled)
+    if newExtensionEnabled ~= config.extensionEnabled then
+        config.extensionEnabled = newExtensionEnabled
+        changed = true
+    end
+
+    if config.extensionEnabled then
+        local newMinExtension = Gui.sliderFloat("Minimum Extension", config.minExtension, 0, 50)
+        if newMinExtension ~= config.minExtension then
+            config.minExtension = newMinExtension
             changed = true
         end
-        if config.slingshotEnabled then
-            local newSlingshotDistance = Gui.sliderFloat("slingshot distance (cm)", config.slingshotDistance, 1000, 10000)
-            if newSlingshotDistance ~= config.slingshotDistance then
-                config.slingshotDistance = newSlingshotDistance
-                changed = true
-            end
 
-            local newSlingshotLaunchTime = Gui.sliderFloat("launch time (sec)", config.slingshotLaunchTime, 0.5, 5.0)
-            if newSlingshotLaunchTime ~= config.slingshotLaunchTime then
-                config.slingshotLaunchTime = newSlingshotLaunchTime
-                changed = true
-            end
+        local newMaxExtension = Gui.sliderFloat("Maximum Extension", config.maxExtension, 50, 500)
+        if newMaxExtension ~= config.maxExtension then
+            config.maxExtension = newMaxExtension
+            changed = true
+        end
 
-            local newSlingshotReturnTime = Gui.sliderFloat("return time (sec)", config.slingshotReturnTime, 1.0, 10.0)
-            if newSlingshotReturnTime ~= config.slingshotReturnTime then
-                config.slingshotReturnTime = newSlingshotReturnTime
-                changed = true
-            end
+        local newExtensionStep = Gui.sliderFloat("Extension Speed", config.extensionStep, 0.5, 20)
+        if newExtensionStep ~= config.extensionStep then
+            config.extensionStep = newExtensionStep
+            changed = true
+        end
 
-            local newDoubleClickThreshold = Gui.sliderFloat("double-click threshold (sec)", config.doubleClickThreshold, 0.1, 1.0)
-            if newDoubleClickThreshold ~= config.doubleClickThreshold then
-                config.doubleClickThreshold = newDoubleClickThreshold
-                changed = true
-            end
+        local newExtensionSmoothness = Gui.sliderFloat("Extension Smoothing", config.extensionSmoothness, 0, 0.95)
+        if newExtensionSmoothness ~= config.extensionSmoothness then
+            config.extensionSmoothness = newExtensionSmoothness
+            changed = true
         end
     end
 
-    if Gui.collapsingHeader("Scraprun") then
-        Gui.textDisabled("Experimental! The furthest player in scraprun will be auto-followed.")
+    Gui.newLine()
 
-        local newFollowBestScraprunPlayer = Gui.checkbox("Follow the best Scraprun player", config.followBestScraprunPlayer)
-        if newFollowBestScraprunPlayer ~= config.followBestScraprunPlayer then
-            config.followBestScraprunPlayer = newFollowBestScraprunPlayer
+    Gui.separatorText("Clipping")
+    local newNearClip = Gui.sliderFloat("Near Clipping Plane", config.nearClip, 0.1, 100)
+    if newNearClip ~= config.nearClip then
+        config.nearClip = newNearClip
+        changed = true
+    end
+
+    local newViewOffset = Gui.dragFloat3("View Offset", config.viewpointOffset, 0.1, -10, 10)
+    if newViewOffset
+        and (
+            newViewOffset.x ~= config.viewpointOffset.x
+            or newViewOffset.y ~= config.viewpointOffset.y
+            or newViewOffset.z ~= config.viewpointOffset.z
+        )
+    then
+        config.viewpointOffset = newViewOffset
+        changed = true
+    end
+
+    Gui.newLine()
+
+    Gui.separatorText("Manual Orbit")
+    local newOrbitRadius = Gui.sliderFloat("Orbit Radius", config.orbitRadius, 10, 1000)
+    if newOrbitRadius ~= config.orbitRadius then
+        config.orbitRadius = newOrbitRadius
+        changed = true
+    end
+
+    local newOrbitRotSpeed = Gui.sliderFloat("Rotation Speed", config.orbitRotSpeed, 50, 360)
+    if newOrbitRotSpeed ~= config.orbitRotSpeed then
+        config.orbitRotSpeed = newOrbitRotSpeed
+        changed = true
+    end
+
+    local newOrbitMouseSensitivity = Gui.sliderFloat("Mouse Sensitivity", config.orbitMouseSensitivity, 0.5, 10.0)
+    if newOrbitMouseSensitivity ~= config.orbitMouseSensitivity then
+        config.orbitMouseSensitivity = newOrbitMouseSensitivity
+        changed = true
+    end
+
+    local newOrbitMouseWheelSensitivity = Gui.sliderFloat("Scroll Sensitivity", config.orbitMouseWheelSensitivity, 10, 150)
+    if newOrbitMouseWheelSensitivity ~= config.orbitMouseWheelSensitivity then
+        config.orbitMouseWheelSensitivity = newOrbitMouseWheelSensitivity
+        changed = true
+    end
+
+    Gui.newLine()
+
+    Gui.separatorText("Slingshot")
+    local newSlingshotEnabled = Gui.checkbox("Enable Slingshot", config.slingshotEnabled)
+    if newSlingshotEnabled ~= config.slingshotEnabled then
+        config.slingshotEnabled = newSlingshotEnabled
+        changed = true
+    end
+
+    Gui.sameLine()
+    Gui.textDisabled("Double-click opposite Trigger while holding camera to launch")
+
+    if config.slingshotEnabled then
+        local newSlingshotDistance = Gui.sliderFloat("Slingshot Distance", config.slingshotDistance, 1000, 10000)
+        if newSlingshotDistance ~= config.slingshotDistance then
+            config.slingshotDistance = newSlingshotDistance
             changed = true
         end
 
-        local best = getBestScraprunPlayer()
-        if best and best.name and best.cubeName then
-            Gui.text("Best runner: " .. best.name .. " (" .. best.cubeName .. ")")
-        else
-            Gui.text("Best runner: None")
+        Gui.sameLine()
+        Gui.textDisabled("(cm)")
+
+        local newSlingshotLaunchTime = Gui.sliderFloat("Launch Time", config.slingshotLaunchTime, 0.5, 5.0)
+        if newSlingshotLaunchTime ~= config.slingshotLaunchTime then
+            config.slingshotLaunchTime = newSlingshotLaunchTime
+            changed = true
         end
+
+        Gui.sameLine()
+        Gui.textDisabled("(sec)")
+
+        local newSlingshotReturnTime = Gui.sliderFloat("Return Time", config.slingshotReturnTime, 1.0, 10.0)
+        if newSlingshotReturnTime ~= config.slingshotReturnTime then
+            config.slingshotReturnTime = newSlingshotReturnTime
+            changed = true
+        end
+
+        Gui.sameLine()
+        Gui.textDisabled("(sec)")
+
+        local newDoubleClickThreshold = Gui.sliderFloat("Double-Click Time", config.doubleClickThreshold, 0.1, 1.0)
+        if newDoubleClickThreshold ~= config.doubleClickThreshold then
+            config.doubleClickThreshold = newDoubleClickThreshold
+            changed = true
+        end
+
+        Gui.sameLine()
+        Gui.textDisabled("(sec)")
+    end
+
+    Gui.newLine()
+
+    Gui.separatorText("Scraprun")
+
+    local newFollowBestScraprunPlayer = Gui.checkbox("Enable Scraprun Mode", config.followBestScraprunPlayer)
+    if newFollowBestScraprunPlayer ~= config.followBestScraprunPlayer then
+        config.followBestScraprunPlayer = newFollowBestScraprunPlayer
+        changed = true
+    end
+
+    Gui.sameLine()
+    Gui.textDisabled("Experimental/broken! The furthest player in Scraprun will be auto-followed.")
+
+    local best = getBestScraprunPlayer()
+    if best and best.name and best.cubeName then
+        Gui.text("Best runner: " .. best.name)
+    else
+        Gui.text("Scraprun's empty")
     end
 
     applySettingsChange(changed)
