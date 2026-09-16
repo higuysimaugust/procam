@@ -352,6 +352,7 @@ end
 
 local pendingGravitySnap = false
 
+local defaultSpawnSearchText = ""
 local playerSearchText = ""
 local selectedPlayerTarget = nil
 local followSpectatorEnabled = false
@@ -367,9 +368,10 @@ local emoteCycleInterval = config.emoteCycleInterval or 1.0
 local timer = 0
 
 local zDriftBallOutlineEnabled = config.zDriftBallOutlineEnabled or false
-local zDriftBallSubdivision = math.clamp(config.zDriftBallSubdivision or 2, 3, 4)
-local zDriftBallRadius = config.zDriftBallRadius or config.zDriftBallScale or 37
-local zDriftBallThickness = config.zDriftBallThickness or 1
+local zDriftBallSubdivision = math.clamp(config.zDriftBallSubdivision or 2, 2, 4)
+local zDriftBallRadius = config.zDriftBallRadius or config.zDriftBallScale or 40
+local zDriftBallThickness = config.zDriftBallThickness or 0.3
+local zDriftBallMaxBalls = math.clamp(math.floor(config.zDriftBallMaxBalls or 1), 1, 20)
 local savedZDriftBallColor = config.zDriftBallColor
 local zDriftBallColor = savedZDriftBallColor and LinearColor.new(
 	savedZDriftBallColor.r or 1,
@@ -385,6 +387,8 @@ local flipDuration = 0.5
 
 local ntimer = 0
 local ndelay = 0.01
+local nameTagsSyncTimer = 0.1
+local nameTagsSyncPending = true
 
 local availableKeybindCategories = {
 	{
@@ -510,9 +514,8 @@ local function getRaycastGravityRotation(): Quat?
 	return Quat.fromXZ(alignedForward, hitNormal)
 end
 
-local function getNearestZDriftBall(position: Vec3)
-	local nearestBall = nil
-	local nearestDistance = math.huge
+local function getNearestZDriftBalls(position: Vec3, maxBalls: number)
+	local balls = {}
 	local frames = getAllGameData and getAllGameData() or {}
 
 	for _, frame in ipairs(frames) do
@@ -520,16 +523,21 @@ local function getNearestZDriftBall(position: Vec3)
 			for _, ball in ipairs(frame.balls) do
 				if ball and ball.transform and ball.transform.position then
 					local distance = Vec3.distance(position, ball.transform.position)
-					if distance < nearestDistance then
-						nearestBall = ball
-						nearestDistance = distance
-					end
+					table.insert(balls, { ball = ball, distance = distance })
 				end
 			end
 		end
 	end
 
-	return nearestBall
+	table.sort(balls, function(first, second)
+		return first.distance < second.distance
+	end)
+
+	local nearestBalls = {}
+	for index = 1, math.min(maxBalls, #balls) do
+		table.insert(nearestBalls, balls[index].ball)
+	end
+	return nearestBalls
 end
 
 local zDriftBallMeshCache = {}
@@ -630,25 +638,27 @@ local function drawZDriftBallOutline()
 		return
 	end
 
-	local ball = getNearestZDriftBall(camera.position)
-	if not ball then
+	local balls = getNearestZDriftBalls(camera.position, zDriftBallMaxBalls)
+	if #balls == 0 then
 		return
 	end
 
-	local position = ball.transform.position
 	local mesh = getZDriftBallMesh(zDriftBallSubdivision)
-	for _, edge in ipairs(mesh.edges) do
-		local first = mesh.vertices[edge[1]] * zDriftBallRadius
-		local second = mesh.vertices[edge[2]] * zDriftBallRadius
-		WorldDraw.drawLine(
-			position + first,
-			position + second,
-			zDriftBallColor.r * 2,
-			zDriftBallColor.g * 2,
-			zDriftBallColor.b * 2,
-			zDriftBallThickness,
-			0
-		)
+	for _, ball in ipairs(balls) do
+		local position = ball.transform.position
+		for _, edge in ipairs(mesh.edges) do
+			local first = mesh.vertices[edge[1]] * zDriftBallRadius
+			local second = mesh.vertices[edge[2]] * zDriftBallRadius
+			WorldDraw.drawLine(
+				position + first,
+				position + second,
+				zDriftBallColor.r * 2,
+				zDriftBallColor.g * 2,
+				zDriftBallColor.b * 2,
+				zDriftBallThickness,
+				0
+			)
+		end
 	end
 end
 
@@ -982,7 +992,13 @@ function onGui()
 			local currentMapType = detectMapType()
 
 			if Gui.beginCombo("##SpawnLocationCombo", defaultSpawnName) then
-				if Gui.collapsingHeader("Orion") then
+				Gui.setNextItemWidth(300)
+				defaultSpawnSearchText = Gui.inputText(Icon.Search .. "  Search##DefaultSpawnSearch", defaultSpawnSearchText)
+				local search = string.lower(defaultSpawnSearchText)
+
+				Gui.beginTabBar("DefaultSpawnMapTabs")
+
+				if Gui.beginTabItem("Orion") then
 					local firstGroup = true
 					local combinedOrion = { orionLocationGroups, orionLocationGroups2 }
 					for _, groups in ipairs(combinedOrion) do
@@ -993,7 +1009,7 @@ function onGui()
 							firstGroup = false
 
 							for _, locName in ipairs(group.labels) do
-								if startLocations.Orion[locName] then
+								if startLocations.Orion[locName] and (search == "" or string.find(string.lower(locName), search, 1, true)) then
 									if Gui.selectable(locName, defaultSpawnName == locName) then
 										defaultSpawnMapType = "Orion"
 										defaultSpawnName = locName
@@ -1005,9 +1021,10 @@ function onGui()
 							end
 						end
 					end
+					Gui.endTabItem()
 				end
 
-				if Gui.collapsingHeader("Ares") then
+				if Gui.beginTabItem("Ares") then
 					local firstGroup = true
 
 					for _, group in ipairs(aresLocationGroups) do
@@ -1017,7 +1034,7 @@ function onGui()
 						firstGroup = false
 
 						for _, locName in ipairs(group.labels) do
-							if startLocations.Ares[locName] then
+							if startLocations.Ares[locName] and (search == "" or string.find(string.lower(locName), search, 1, true)) then
 								if Gui.selectable(locName, defaultSpawnName == locName) then
 									defaultSpawnMapType = "Ares"
 									defaultSpawnName = locName
@@ -1028,10 +1045,11 @@ function onGui()
 							end
 						end
 					end
+					Gui.endTabItem()
 				end
 
-				if Gui.collapsingHeader("Shuttle##g") then
-					if startLocations.Shuttle and startLocations.Shuttle["Shuttle"] then
+				if Gui.beginTabItem("Shuttle") then
+					if startLocations.Shuttle and startLocations.Shuttle["Shuttle"] and (search == "" or string.find("shuttle", search, 1, true)) then
 						if Gui.selectable("Shuttle##tp", defaultSpawnName == "Shuttle") then
 							defaultSpawnMapType = "Shuttle"
 							defaultSpawnName = "Shuttle"
@@ -1040,7 +1058,10 @@ function onGui()
 							if saveConfig then saveConfig() end
 						end
 					end
+					Gui.endTabItem()
 				end
+
+				Gui.endTabBar()
 
 				Gui.endCombo()
 			end
@@ -1476,13 +1497,15 @@ function onGui()
 			Gui.sameLine()
 			if Gui.button(Icon.Sync .. "  Reset to default") then
 				zDriftBallSubdivision = 2
-				zDriftBallRadius = 50
+				zDriftBallRadius = 40
 				zDriftBallThickness = 0.3
+				zDriftBallMaxBalls = 1
 				zDriftBallColor = LinearColor.new(1, 1, 1, 1)
 
 				config.zDriftBallSubdivision = 2
-				config.zDriftBallRadius = 50
+				config.zDriftBallRadius = 40
 				config.zDriftBallThickness = 0.3
+				config.zDriftBallMaxBalls = 1
 				config.zDriftBallColor = { r = 1, g = 1, b = 1, a = 1 }
 
 				if saveConfig then saveConfig() end
@@ -1495,17 +1518,24 @@ function onGui()
 				if saveConfig then saveConfig() end
 			end
 
-			local newZDriftBallRadius = Gui.sliderFloat("Outline size", zDriftBallRadius, 0.1, 200)
+			local newZDriftBallRadius = Gui.sliderFloat("Outline size", zDriftBallRadius, 30, 60)
 			if newZDriftBallRadius ~= zDriftBallRadius then
 				zDriftBallRadius = newZDriftBallRadius
 				config.zDriftBallRadius = zDriftBallRadius
 				if saveConfig then saveConfig() end
 			end
 
-			local newZDriftBallThickness = Gui.sliderFloat("Line thickness", zDriftBallThickness, 0.01, 10)
+			local newZDriftBallThickness = Gui.sliderFloat("Line thickness", zDriftBallThickness, 0.01, 0.8)
 			if newZDriftBallThickness ~= zDriftBallThickness then
 				zDriftBallThickness = newZDriftBallThickness
 				config.zDriftBallThickness = zDriftBallThickness
+				if saveConfig then saveConfig() end
+			end
+
+			local newZDriftBallMaxBalls = Gui.sliderInt("Max balls to use outline on", zDriftBallMaxBalls, 1, 20)
+			if newZDriftBallMaxBalls ~= zDriftBallMaxBalls then
+				zDriftBallMaxBalls = newZDriftBallMaxBalls
+				config.zDriftBallMaxBalls = zDriftBallMaxBalls
 				if saveConfig then saveConfig() end
 			end
 
@@ -1523,8 +1553,6 @@ function onGui()
 				}
 				if saveConfig then saveConfig() end
 			end
-
-			Gui.textDisabled("The nearest ball will use the outline")
 		end
 
 		Gui.newLine()
@@ -1656,7 +1684,10 @@ function onGui()
 
 
         if selectedPlayerObj then
-            if Gui.button(Icon.LocationArrow .. "  Teleport to " .. (selectedPlayerObj.playerName or "")) then
+			local isFollowingSelectedPlayer = Axis.isEnabled
+				and config.currentPlayerId == selectedPlayerTarget.id
+
+            if Gui.button(Icon.LocationArrow .. "  Teleport") then
                 local targetPos = (selectedPlayerObj.head and selectedPlayerObj.head.position)
                     or (selectedPlayerObj.root and selectedPlayerObj.root.position)
                     or (selectedPlayerObj.transform and selectedPlayerObj.transform.position)
@@ -1665,14 +1696,27 @@ function onGui()
 
             Gui.sameLine()
 
-			if Gui.button(Icon.ChevronRight .. "  Start Handcam following") then
-				config.currentPlayerId = selectedPlayerTarget.id
+			local followLabel = isFollowingSelectedPlayer
+				and (Icon.Pause .. "  Stop Following")
+				or (Icon.Play .. "  Start Following")
+			if Gui.button(followLabel) then
+				if isFollowingSelectedPlayer then
+					config.currentPlayerId = nil
+				else
+					config.followBestScraprunPlayer = false
+					config.currentPlayerId = selectedPlayerTarget.id
+				end
 				if saveConfig then saveConfig() end
-				
-				if not Axis.isEnabled then
+
+				if not isFollowingSelectedPlayer and not Axis.isEnabled then
 					Axis.isEnabled = true
 				end
-				Axis.onLoad()
+				if isFollowingSelectedPlayer then
+					Axis.isEnabled = false
+					Axis.onUnload()
+				else
+					Axis.onLoad()
+				end
 			end
 		else
 			Gui.textDisabled("Select a player above to interact.")
@@ -1754,6 +1798,14 @@ function onGui()
 end
 
 function tick(dt)
+	if nameTagsSyncPending then
+		nameTagsSyncTimer -= dt
+		if nameTagsSyncTimer <= 0 then
+			camera.showNameTags = config.showNameTags
+			nameTagsSyncPending = false
+		end
+	end
+
 	if enableShowNameTagsKey and parseKeyStr(showNameTagsKeyStr) and Input.getKeyDown(parseKeyStr(showNameTagsKeyStr)) then
 		config.showNameTags = not config.showNameTags
 		camera.showNameTags = config.showNameTags

@@ -16,10 +16,12 @@ if config.followBestScraprunPlayer == nil then config.followBestScraprunPlayer =
 config.useTriggerControl = true
 config.headGrabRadius = config.headGrabRadius or 30
 config.headDropRadius = config.headDropRadius or 25
+config.shoulderDropRadius = config.shoulderDropRadius or 25
 config.cameraGrabRadius = config.cameraGrabRadius or 50
 config.ownerRecallTime = 1.5
 if config.requireTwoHandsRecall == nil then config.requireTwoHandsRecall = false end
 config.thirdPersonDistance = config.thirdPersonDistance or 300
+config.thirdPersonHeight = config.thirdPersonHeight or 0
 config.grabDelayTime = config.grabDelayTime or 1.0
 
 config.throwThreshold = config.throwThreshold or 200
@@ -100,19 +102,23 @@ local currentLeftHandVelocity = Vec3.new(0, 0, 0)
 local worldUp = Vec3.new(0, 1, 0)
 
 local scraprunCubes = {
-    { name = "Cube_1", position = Vec3.new(-18919.33, 14935.28, 27774.44), rotation = Vec3.new(0.00, 32.00, 0.00), scale = Vec3.new(2360.00, 6480.00, 1084.00) },
-    { name = "Cube_2", position = Vec3.new(-16557.00, 17889.97, 28660.72), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2833.00, 2461.00, 2017.00) },
-    { name = "Cube_3", position = Vec3.new(-14180.23, 15359.92, 29439.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2410.00, 7466.00, 1157.00) },
-    { name = "Cube_4", position = Vec3.new(-15328.37, 10699.46, 28778.84), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(4869.00, 1846.00, 1386.00) },
-    { name = "Cube_5", position = Vec3.new(-18275.23, 14128.92, 26536.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2464.00, 10000.00, 1157.00) },
-    { name = "Cube_6", position = Vec3.new(-14765.37, 17922.00, 27626.84), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(4869.00, 1846.00, 1386.00) },
-    { name = "Cube_7", position = Vec3.new(-13409.23, 13042.92, 28052.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2464.00, 7880.00, 1157.00) },
-    { name = "Cube_8", position = Vec3.new(-16351.37, 10357.00, 25820.84), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(4869.00, 1846.00, 1386.00) },
-    { name = "Cube_9", position = Vec3.new(-17518.23, 14522.92, 24900.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(1624.00, 6526.00, 1410.00) },
+    { name = "Cube_1", position = Vec3.new(-18919.33, 15251.28, 27774.44), rotation = Vec3.new(0.00, 32.00, 0.00), scale = Vec3.new(2360.00, 7155.00, 1084.00), startAxis = "Y", endAxis = "-Y" },
+    { name = "Cube_2", position = Vec3.new(-16760.00, 17815.97, 28954.72), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2524.00, 2429.00, 687.00), startAxis = "X", endAxis = "-X" },
+    { name = "Cube_3", position = Vec3.new(-14276.23, 15356.92, 29497.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2410.00, 7466.00, 1433.00), startAxis = "Y", endAxis = "-Y" },
+    { name = "Cube_4", position = Vec3.new(-15328.37, 10699.46, 28778.84), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(4869.00, 1846.00, 1386.00), startAxis = "-X", endAxis = "X" },
+    { name = "Cube_5", position = Vec3.new(-18275.23, 14128.92, 26536.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2464.00, 10000.00, 1157.00), startAxis = "Y", endAxis = "-Y" },
+    { name = "Cube_6", position = Vec3.new(-14761.37, 17922.00, 27626.84), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(4695.00, 1718.00, 1386.00), startAxis = "X", endAxis = "-X" },
+    { name = "Cube_7", position = Vec3.new(-13409.23, 13104.92, 28052.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(2464.00, 7880.00, 1157.00), startAxis = "Y", endAxis = "-Y" },
+    { name = "Cube_8", position = Vec3.new(-16351.37, 10357.00, 25820.84), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(4857.00, 1833.00, 1386.00), startAxis = "-X", endAxis = "X" },
+    { name = "Cube_9", position = Vec3.new(-17518.23, 14532.92, 24900.59), rotation = Vec3.new(180.00, -30.00, 180.00), scale = Vec3.new(1615.00, 6481.00, 1550.00), startAxis = "Y", endAxis = "-Y" },
 }
 
 local scraprunBestPlayerName = "None"
 local scraprunBestCubeName = "None"
+local scraprunTargetSwitchTimer = 0
+local pendingBestPlayerId = nil
+local scraprunswitchdebounce = 0.35
+local scraprunboxpadding = -300.0
 
 local currentExtension = config.minExtension
 local targetExtension = config.minExtension
@@ -510,14 +516,16 @@ local function setThirdPersonMode(player)
 
     local headPos = player.head.position
     local headRot = player.head.rotation
+    local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
+    local cameraAnchor = headPos + (upVector * config.thirdPersonHeight)
     local behindVector = headRot:getForwardVector() * -config.thirdPersonDistance
-    local hit = camera:castRay(headPos, headPos + behindVector)
+    local hit = camera:castRay(cameraAnchor, cameraAnchor + behindVector)
     if hit.successful then
         camera.position = hit.position + (hit.normal * 10)
     else
-        camera.position = headPos + behindVector
+        camera.position = cameraAnchor + behindVector
     end
-    camera.rotation = headRot
+    camera:lookAt(cameraAnchor, upVector)
     camera.hideNearestHead = false
     applyCameraSmoothness()
     updateNameTagsVisibility()
@@ -657,14 +665,15 @@ local function updateThirdPersonMode(player, dt)
     if not player or not player.head then return end
     local headPos = player.head.position
     local headRot = player.head.rotation
-    local targetPos = headPos + (headRot:getForwardVector() * -config.thirdPersonDistance)
-    local hit = camera:castRay(headPos, targetPos)
+    local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
+    local cameraAnchor = headPos + (upVector * config.thirdPersonHeight)
+    local targetPos = cameraAnchor + (headRot:getForwardVector() * -config.thirdPersonDistance)
+    local hit = camera:castRay(cameraAnchor, targetPos)
     if hit.successful then
         targetPos = hit.position + (hit.normal * 10)
     end
     camera.position = targetPos
-    local upVector = (player.root and player.root.rotation and player.root.rotation:getUpVector()) or worldUp
-    camera:lookAt(headPos, upVector)
+    camera:lookAt(cameraAnchor, upVector)
     camera.hideNearestHead = false
     local distToTarget = Vec3.distance(camera.position, headPos)
     camera.fieldOfView = math.max(60, math.min(config.fov, config.fov - ((config.thirdPersonDistance - distToTarget) / 10)))
@@ -1013,7 +1022,7 @@ function beginLeftHandGrip(player, handPos, handRot)
 end
 
 function updateRightHandGrip(player, handPos, handRot, dt)
-    if not player or not handPos or not handRot then return end
+    if not player or not handPos then return end
     local headPos = player.head.position
     local headToHand = handPos - headPos
     local headToHandDir = headToHand:normalize()
@@ -1078,7 +1087,7 @@ function updateRightHandGrip(player, handPos, handRot, dt)
 end
 
 function updateLeftHandGrip(player, handPos, handRot, dt)
-    if not player or not handPos or not handRot then return end
+    if not player or not handPos then return end
     local headPos = player.head.position
     local headToHand = handPos - headPos
     local headToHandDir = headToHand:normalize()
@@ -1162,22 +1171,32 @@ local function isPointInsideOrientedBox(point, cube)
         and math.abs(z) <= cube.scale.z * 0.5
 end
 
-local function shouldInvertScraprunCubeAxis(cube)
-    if not cube or not cube.name then
-        return false
+local function getScraprunWallAxis(axisName, xAxis, yAxis, zAxis)
+    if axisName == "X" then
+        return xAxis, 1
+    elseif axisName == "-X" then
+        return xAxis, -1
+    elseif axisName == "Y" then
+        return yAxis, 1
+    elseif axisName == "-Y" then
+        return yAxis, -1
+    elseif axisName == "Z" then
+        return zAxis, 1
+    elseif axisName == "-Z" then
+        return zAxis, -1
     end
-    return cube.name == "Cube_1" or cube.name == "Cube_3" or cube.name == "Cube_4"
-end
-
-local function invertScraprunProgressIfNeeded(cube, progress)
-    if shouldInvertScraprunCubeAxis(cube) then
-        return 1 - progress
-    end
-    return progress
+    return nil, nil
 end
 
 local function getScraprunProgress(point, cube)
-    if not point or not cube or not cube.position or not cube.rotation or not cube.scale then
+    if not point
+        or not cube
+        or not cube.position
+        or not cube.rotation
+        or not cube.scale
+        or not cube.startAxis
+        or not cube.endAxis
+    then
         return nil
     end
 
@@ -1187,32 +1206,45 @@ local function getScraprunProgress(point, cube)
     local zAxis = rot:getForwardVector()
     local dx = point - cube.position
 
-    local isYAxisCube = cube.scale.y <= cube.scale.x and cube.scale.y <= cube.scale.z
-    local isXZMixCube = cube.scale.x >= cube.scale.z and cube.scale.z >= cube.scale.y
-
-    if isYAxisCube then
-        local coord = Vec3.dot(dx, yAxis)
-        local progress = (coord + cube.scale.y * 0.5) / cube.scale.y
-        if progress < 0 then progress = 0 end
-        if progress > 1 then progress = 1 end
-        return invertScraprunProgressIfNeeded(cube, progress)
+    local startAxis, startSign = getScraprunWallAxis(cube.startAxis, xAxis, yAxis, zAxis)
+    local endAxis, endSign = getScraprunWallAxis(cube.endAxis, xAxis, yAxis, zAxis)
+    if not startAxis or not endAxis or startAxis ~= endAxis then
+        return nil
     end
 
-    if cube.scale.x >= cube.scale.z then
-        local pairAxis = (xAxis + zAxis):normalize()
-        local coord = Vec3.dot(dx, pairAxis)
-        local length = math.sqrt(cube.scale.x * cube.scale.x + cube.scale.z * cube.scale.z)
-        local progress = (coord + length * 0.5) / length
-        if progress < 0 then progress = 0 end
-        if progress > 1 then progress = 1 end
-        return invertScraprunProgressIfNeeded(cube, progress)
+    local axisLength = cube.scale[cube.startAxis:sub(-1):lower()]
+    if not axisLength or axisLength <= 0 then
+        return nil
     end
 
-    local coord = Vec3.dot(dx, xAxis)
-    local progress = (coord + cube.scale.x * 0.5) / cube.scale.x
+    local coord = Vec3.dot(dx, startAxis)
+    local startCoord = startSign * axisLength * 0.5
+    local endCoord = endSign * axisLength * 0.5
+    local progress = (coord - startCoord) / (endCoord - startCoord)
     if progress < 0 then progress = 0 end
     if progress > 1 then progress = 1 end
-    return invertScraprunProgressIfNeeded(cube, progress)
+    return progress
+end
+
+local function isPointInsideOrientedBox(point, cube, padding)
+    padding = padding or scraprunboxpadding or 0
+    if not point or not cube or not cube.position or not cube.rotation or not cube.scale then
+        return false
+    end
+
+    local rot = Quat.fromEuler(cube.rotation.x, cube.rotation.y, cube.rotation.z)
+    local xAxis = rot:getRightVector()
+    local yAxis = rot:getUpVector()
+    local zAxis = rot:getForwardVector()
+    local dx = point - cube.position
+
+    local x = Vec3.dot(dx, xAxis)
+    local y = Vec3.dot(dx, yAxis)
+    local z = Vec3.dot(dx, zAxis)
+
+    return math.abs(x) <= (cube.scale.x * 0.5 + padding)
+        and math.abs(y) <= (cube.scale.y * 0.5 + padding)
+        and math.abs(z) <= (cube.scale.z * 0.5 + padding)
 end
 
 local function getBestScraprunPlayer()
@@ -1223,13 +1255,21 @@ local function getBestScraprunPlayer()
     for i = 1, #players do
         local p = players[i]
         local player = getPlayerByTarget({ id = p.id, sessionIndex = p.sessionIndex })
+        
+        local pos = nil
         if player and player.head and player.head.position then
+            pos = player.head.position
+        elseif player and player.root and player.root.position then
+            pos = player.root.position
+        end
+
+        if pos then
             for j = 1, #scraprunCubes do
                 local cube = scraprunCubes[j]
-                if isPointInsideOrientedBox(player.head.position, cube) then
-                    local progress = getScraprunProgress(player.head.position, cube)
+                if isPointInsideOrientedBox(pos, cube, scraprunboxpadding) then
+                    local progress = getScraprunProgress(pos, cube)
                     if progress ~= nil then
-                        local rankScore = j * 1000000 + progress
+                        local rankScore = (j * 1000000) + (progress * 100000)
                         if rankScore > bestScore then
                             bestScore = rankScore
                             best = {
@@ -1261,52 +1301,68 @@ end
 
 local function updateScraprunFollow(dt)
     local best = getBestScraprunPlayer()
+
     if not best or not best.player then
-        if camera then
-            camera.position = Vec3.new(-16749.119, 5031.522, 28948.580)
-            camera.rotation = Quat.fromEuler(210, 0, -270.465)
-            camera.hideNearestHead = false
-            camera.positionSmoothing = 0
-            camera.rotationSmoothing = 0
+        if activePlayerId ~= nil then
+            activePlayerId = nil
+            activePlayerTarget = nil
+            if camera then
+                camera.position = Vec3.new(-16749.119, 5031.522, 28948.580)
+                camera.rotation = Quat.fromEuler(210, 0, -270.465)
+                camera.hideNearestHead = false
+                camera.positionSmoothing = 0
+                camera.rotationSmoothing = 0
+            end
         end
         return
     end
 
-    activePlayerTarget = { id = best.id, sessionIndex = best.sessionIndex }
-    activePlayerId = best.id
-    selectedPlayerTarget = { id = best.id, sessionIndex = best.sessionIndex }
-    if saveConfig then saveConfig() end
+    if best.id ~= activePlayerId then
+        if pendingBestPlayerId ~= best.id then
+            pendingBestPlayerId = best.id
+            scraprunTargetSwitchTimer = 0
+        else
+            scraprunTargetSwitchTimer = scraprunTargetSwitchTimer + dt
+        end
 
-    manualOrbitMode = false
-    cameraInHand = false
-    handHolding = nil
-    freeFloatingMode = false
-    ballMode = false
-    shoulderMode = false
-    shoulderSide = "right"
-    thrownMode = false
-    facingUser = true
-    viewFlipped = false
+        if scraprunTargetSwitchTimer >= scraprunswitchdebounce or activePlayerId == nil then
+            activePlayerTarget = { id = best.id, sessionIndex = best.sessionIndex }
+            activePlayerId = best.id
+            selectedPlayerTarget = { id = best.id, sessionIndex = best.sessionIndex }
+            if saveConfig then saveConfig() end
 
-    if thirdPersonMode then
-        viewpointMode = false
-        thirdPersonMode = true
-        updateThirdPersonMode(best.player, dt)
-        return
-    end
+            manualOrbitMode = false
+            cameraInHand = false
+            handHolding = nil
+            freeFloatingMode = false
+            ballMode = false
+            shoulderMode = false
+            shoulderSide = "right"
+            thrownMode = false
+            facingUser = true
+            viewFlipped = false
 
-    viewpointMode = true
-    thirdPersonMode = false
-
-    if best.player and best.player.head then
-        setViewpointMode(best.player)
+            if thirdPersonMode then
+                setThirdPersonMode(best.player)
+            else
+                setViewpointMode(best.player)
+            end
+        end
     else
-        camera.position = Vec3.new(-16749.119, 5031.522, 28948.580)
-        camera.rotation = Quat.fromEuler(0, 0, -270.465)
-        camera.hideNearestHead = config.hideHead
-        camera.positionSmoothing = 0
-        camera.rotationSmoothing = 0
-        updateNameTagsVisibility()
+        pendingBestPlayerId = best.id
+        scraprunTargetSwitchTimer = 0
+
+        if thirdPersonMode then
+            updateThirdPersonMode(best.player, dt)
+        else
+            if camera and best.player.head then
+                camera.position = best.player.head.position
+                camera.rotation = best.player.head.rotation
+                applyCameraSmoothness(true)
+                camera.hideNearestHead = config.hideHead
+                updateNameTagsVisibility()
+            end
+        end
     end
 end
 
@@ -1321,6 +1377,46 @@ local function getNearestSurfaceFloor(position, maxDistance)
         return hit
     end
     return nil
+end
+
+local function getThrownCameraContactDistance(startPos, endPos, player)
+    if not startPos or not endPos or not player then
+        return nil
+    end
+
+    local bodyPositions = {}
+    if player.root and player.root.position then
+        table.insert(bodyPositions, player.root.position)
+    end
+    if player.head and player.head.position then
+        table.insert(bodyPositions, player.head.position)
+    end
+    local leftHandPos = getHandPosition(player, true)
+    if leftHandPos then
+        table.insert(bodyPositions, leftHandPos)
+    end
+    local rightHandPos = getHandPosition(player, false)
+    if rightHandPos then
+        table.insert(bodyPositions, rightHandPos)
+    end
+
+    local throwVector = endPos - startPos
+    local throwLengthSquared = throwVector:squaredLength()
+    local closestDist = nil
+    for i = 1, #bodyPositions do
+        local bodyOffset = bodyPositions[i] - startPos
+        local progress = 0
+        if throwLengthSquared > 0 then
+            progress = math.max(0, math.min(1, Vec3.dot(bodyOffset, throwVector) / throwLengthSquared))
+        end
+        local contactPos = startPos + (throwVector * progress)
+        local dist = Vec3.distance(contactPos, bodyPositions[i])
+        if not closestDist or dist < closestDist then
+            closestDist = dist
+        end
+    end
+
+    return closestDist
 end
 
 local function tryFollowPlayerOnThrownCameraContact(startPos, endPos)
@@ -1338,16 +1434,11 @@ local function tryFollowPlayerOnThrownCameraContact(startPos, endPos)
         local target = { id = p.id, sessionIndex = p.sessionIndex }
         if target.id ~= activePlayerId and target.id ~= config.currentPlayerId then
             local player = getPlayerByTarget(target)
-            if player and player.head and player.head.position then
-                local headPos = player.head.position
-                local distStart = Vec3.distance(startPos, headPos)
-                local distEnd = Vec3.distance(endPos, headPos)
-                local distToHead = math.min(distStart, distEnd)
-                if distToHead <= config.headGrabRadius and distToHead < closestDist then
-                    closestPlayer = player
-                    closestTarget = target
-                    closestDist = distToHead
-                end
+            local distToPlayer = getThrownCameraContactDistance(startPos, endPos, player)
+            if distToPlayer and distToPlayer <= config.headGrabRadius and distToPlayer < closestDist then
+                closestPlayer = player
+                closestTarget = target
+                closestDist = distToPlayer
             end
         end
     end
@@ -1398,7 +1489,8 @@ local function handleCameraRelease(player, releaseVelocity)
     end
 
     local shoulderSideDetected = detectShoulderSide(player)
-    if shoulderSideDetected then
+    local shoulderDropDistance = player and player.head and Vec3.distance(camera.position, player.head.position)
+    if shoulderSideDetected and shoulderDropDistance and shoulderDropDistance <= config.shoulderDropRadius then
         setShoulderMode(player, shoulderSideDetected)
         return newOwnerFound
     end
@@ -1463,8 +1555,8 @@ local function drawHomeTab()
     Gui.separatorText(Icon.InfoCircle .. "  State")
 
     local ownerPlayerObj = getPlayerByTarget(getOwnerTarget())
-    local ownerText = ownerPlayerObj and ownerPlayerObj.playerName or "none"
-    local ownerStatus = config.ownerId and (ownerIsPresent and "[online]" or "[dead]") or ""
+    local ownerText = ownerPlayerObj and ownerPlayerObj.playerName or "None"
+    local ownerStatus = config.ownerId and (ownerIsPresent and Icon.Check or Icon.Times) or ""
 
     local followingPlayerObj = getPlayerByTarget(getCurrentTarget())
     local followingText = followingPlayerObj and followingPlayerObj.playerName or "None"
@@ -1566,6 +1658,7 @@ local function drawHomeTab()
             Gui.beginDisabled()
         end
         if Gui.button(Icon.ChevronRight .. "  " .. followLabel) then
+            config.followBestScraprunPlayer = false
             activePlayerTarget = { id = selectedPlayerTarget.id, sessionIndex = selectedPlayerTarget.sessionIndex }
             activePlayerId = selectedPlayerTarget.id
             if saveConfig then saveConfig() end
@@ -1610,8 +1703,6 @@ local function drawHomeTab()
     local currentPlayer = getPlayerByTarget(getCurrentTarget())
 
     if config.followBestScraprunPlayer then
-        -- In Scraprun mode only the automatic first-person path and an explicitly
-        -- manually chosen third-person path are allowed. Other view modes are blocked.
         if Gui.button("First Person Mode") then
             if currentPlayer then
                 facingUser = true
@@ -1779,7 +1870,7 @@ local function drawSettingsTab()
 
     Gui.separatorText("Quick Settings")
 
-    local newFov = Gui.sliderFloat("Field of View", config.fov, 60, 120)
+    local newFov = Gui.sliderFloat("Field of View", config.fov, 80, 130)
     if newFov ~= config.fov then
         config.fov = newFov
         changed = true
@@ -1915,6 +2006,12 @@ local function drawSettingsTab()
         changed = true
     end
 
+    local newShoulderDropRadius = Gui.sliderFloat("Shoulder Drop Range", config.shoulderDropRadius, 10, 100)
+    if newShoulderDropRadius ~= config.shoulderDropRadius then
+        config.shoulderDropRadius = newShoulderDropRadius
+        changed = true
+    end
+
     local newCameraGrabRadius = Gui.sliderFloat("Camera Grab Range", config.cameraGrabRadius, 10, 100)
     if newCameraGrabRadius ~= config.cameraGrabRadius then
         config.cameraGrabRadius = newCameraGrabRadius
@@ -1927,6 +2024,12 @@ local function drawSettingsTab()
     local newThirdPersonDistance = Gui.sliderFloat("Camera Distance", config.thirdPersonDistance, 50, 500)
     if newThirdPersonDistance ~= config.thirdPersonDistance then
         config.thirdPersonDistance = newThirdPersonDistance
+        changed = true
+    end
+
+    local newThirdPersonHeight = Gui.sliderFloat("Camera Height", config.thirdPersonHeight, -200, 200)
+    if newThirdPersonHeight ~= config.thirdPersonHeight then
+        config.thirdPersonHeight = newThirdPersonHeight
         changed = true
     end
 

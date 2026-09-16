@@ -53,7 +53,7 @@ type Light = {
     intensity: number,
     color: Vec3,
     radius: number,
-    lightType: string, -- "Area" or "Player"
+    lightType: string, 
     isPlayerLight: boolean?,
     trackedPlayerId: number?,
     name: string,
@@ -72,6 +72,7 @@ local lightSpawnCount = 0
 local status = " "
 local lightTabOpen = false
 local lightIndex = 1
+local lightPlayerSearchText = ""
 
 if config.hudSpeedEnabled == nil then config.hudSpeedEnabled = false end
 config.hudSpeedPlayerId = config.hudSpeedPlayerId or nil
@@ -840,7 +841,6 @@ end
 local function updateLightObjects()
     for i, entry in ipairs(lights) do
         if entry.__internalLight then
-            -- Update position for player lights
             if entry.isPlayerLight and entry.trackedPlayerId then
                 local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
                 local targetPlayer = nil
@@ -853,7 +853,6 @@ local function updateLightObjects()
                 end
                 
                 if targetPlayer and targetPlayer.root and targetPlayer.root.position then
-                    -- Position light between player and camera
                     local playerPos = targetPlayer.root.position
                     local camPos = camera.position
                     entry.position = playerPos + (camPos - playerPos) * 0.3
@@ -916,14 +915,18 @@ local function onLightsGui()
 
     Gui.separatorText("Spawn Player Light")
     Gui.textDisabled("Spawn lights that track a player")
+    lightPlayerSearchText = Gui.inputText(Icon.Search .. "  Search##LightPlayerSearch", lightPlayerSearchText)
+    local searchText = string.lower(lightPlayerSearchText)
     local players = getPlayersList() or {}
     if #players == 0 then
         Gui.textDisabled("No players available")
     else
         if Gui.beginListBox("##PlayerListForLight") then
             for _, p in ipairs(players) do
-                if Gui.selectable(p.name, false) then
-                    spawnPlayerLight(p.id)
+                if searchText == "" or string.find(string.lower(p.name), searchText, 1, true) then
+                    if Gui.selectable(p.name, false) then
+                        spawnPlayerLight(p.id)
+                    end
                 end
             end
         end
@@ -1082,8 +1085,8 @@ local function renderPlacedItems(placedList: {Placed})
                     if entry.trackLeftHand == nil then entry.trackLeftHand = false end
                     if entry.trackRightHand == nil then entry.trackRightHand = true end
 
-                    Gui.separatorText("Select Target to Track")
-                    entry.targetSearchText = Gui.inputText(Icon.Search .. "  Search Target", entry.targetSearchText or "")
+                    Gui.separatorText("Player")
+                    entry.targetSearchText = Gui.inputText(Icon.Search .. "  Search", entry.targetSearchText or "")
                     
                     local players = getPlayersList()
                     local searchText = string.lower(entry.targetSearchText or "")
@@ -1568,7 +1571,6 @@ function tick(dt: number)
         return math.clamp(size, 1, 60)
     end
 
-    -- Update and render lights
     updateLightObjects()
     WorldDraw.clear()
     

@@ -236,7 +236,7 @@ function Replays.onGui()
 	Gui.textDisabled("Load replays in, then check the replays you need")
 	Gui.separatorText("Keybinds")
 
-	config.replayPauseKeyEnabled = Gui.checkbox("Pause / Unpause checked replays", config.replayPauseKeyEnabled)
+	config.replayPauseKeyEnabled = Gui.checkbox(Icon.Play .. "  Play/Pause Checked Replays", config.replayPauseKeyEnabled)
 	if saveConfig then saveConfig() end
 	Gui.sameLine()
 	if not config.replayPauseKeyEnabled then
@@ -256,7 +256,7 @@ function Replays.onGui()
 		Gui.textDisabled("Invalid key")
 	end
 
-	config.replayResetKeyEnabled = Gui.checkbox("Set checked replays back to start", config.replayResetKeyEnabled)
+	config.replayResetKeyEnabled = Gui.checkbox(Icon.Sync .. "  Reset Checked Replays", config.replayResetKeyEnabled)
 	if saveConfig then saveConfig() end
 	Gui.sameLine()
 	if not config.replayResetKeyEnabled then
@@ -276,7 +276,7 @@ function Replays.onGui()
 		Gui.textDisabled("Invalid key")
 	end
 
-	config.replayForwardKeyEnabled = Gui.checkbox("Fast-forward checked replays forward", config.replayForwardKeyEnabled)
+	config.replayForwardKeyEnabled = Gui.checkbox(Icon.FastForward .. "  Fast-forward Checked Replays", config.replayForwardKeyEnabled)
 	if saveConfig then saveConfig() end
 	Gui.sameLine()
 	if not config.replayForwardKeyEnabled then
@@ -303,7 +303,7 @@ function Replays.onGui()
 		Gui.textDisabled("Invalid key")
 	end
 
-	config.replayBackwardKeyEnabled = Gui.checkbox("Fast-forward checked replays back", config.replayBackwardKeyEnabled)
+	config.replayBackwardKeyEnabled = Gui.checkbox(Icon.FastBackward .. "  Rewind Checked Replays", config.replayBackwardKeyEnabled)
 	if saveConfig then saveConfig() end
 	Gui.sameLine()
 	if not config.replayBackwardKeyEnabled then
