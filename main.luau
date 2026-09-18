@@ -10,7 +10,9 @@ config = config or {}
 local moveSpeed = config.moveSpeed or 1600
 local mouseSensitivity = config.mouseSensitivity or 3.6
 local collisionEnabled = config.collisionEnabled
-if collisionEnabled == nil then collisionEnabled = false end
+if collisionEnabled == nil then
+	collisionEnabled = false
+end
 local collisionRadius = 100
 local gravityChaser = gravity.upRotation
 local gravityTarget = gravity.upRotation
@@ -21,21 +23,31 @@ local gravityRegionTimer = 0
 local gravityRegionRayDistance = 1000000
 local tabTitleMode = config.tabTitleMode or "icon+name"
 local showModelsTab = config.showModelsTab
-if showModelsTab == nil then showModelsTab = true end
+if showModelsTab == nil then
+	showModelsTab = true
+end
 local showReplayTab = config.showReplayTab
-if showReplayTab == nil then showReplayTab = true end
+if showReplayTab == nil then
+	showReplayTab = true
+end
 config.showAxisDebug = config.showAxisDebug ~= nil and config.showAxisDebug or false
 Inputs.enableSpaceKeybind = config.enableSpaceKeybind ~= nil and config.enableSpaceKeybind or false
-if config.alignToGravity == nil then config.alignToGravity = true end
+if config.alignToGravity == nil then
+	config.alignToGravity = true
+end
 Inputs.alignToGravity = config.alignToGravity
-if config.localMovementAxesDefault == nil then config.localMovementAxesDefault = true end
+if config.localMovementAxesDefault == nil then
+	config.localMovementAxesDefault = true
+end
 Inputs.localMovementAxesDefault = config.localMovementAxesDefault
 Inputs.speedAdjustmentRate = config.speedAdjustmentRate or Inputs.speedAdjustmentRate
 Inputs.lookSmoothness = config.lookSmoothness or Inputs.lookSmoothness
 Inputs.smoothing = config.smoothing ~= nil and config.smoothing or false
 Inputs.playGoalExplosions = config.playGoalExplosions ~= nil and config.playGoalExplosions or false
 Inputs.playScraprunSpinners = config.playScraprunSpinners ~= nil and config.playScraprunSpinners or false
-if config.placeBallEnabled == nil then config.placeBallEnabled = true end
+if config.placeBallEnabled == nil then
+	config.placeBallEnabled = true
+end
 Inputs.placeBallEnabled = config.placeBallEnabled
 Inputs.ballScaleMultiplier = config.ballScaleMultiplier or Inputs.ballScaleMultiplier
 if config.showNameTags == nil then
@@ -58,8 +70,10 @@ local screenshotSuccessTimer = 0
 
 local enableScreenshotKey = config.enableScreenshotKey
 if enableScreenshotKey == nil then
-		enableScreenshotKey = config.useF9Screenshot
-		if enableScreenshotKey == nil then enableScreenshotKey = true end
+	enableScreenshotKey = config.useF9Screenshot
+	if enableScreenshotKey == nil then
+		enableScreenshotKey = true
+	end
 end
 local screenshotKeyStr = config.screenshotKeyStr or "F9"
 
@@ -71,16 +85,20 @@ local handcamKeyStr = config.handcamKeyStr or "RightBracket"
 
 local enableEmoteToggleKey = config.enableEmoteToggleKey
 if enableEmoteToggleKey == nil then
-		enableEmoteToggleKey = config.toggleWinkEmote
-		if enableEmoteToggleKey == nil then enableEmoteToggleKey = true end
+	enableEmoteToggleKey = config.toggleWinkEmote
+	if enableEmoteToggleKey == nil then
+		enableEmoteToggleKey = true
+	end
 end
 local emoteToggleKeyStr = config.emoteToggleKeyStr or "L"
 local emoteToggleId = config.emoteToggleId or 9
 
 local enableTeleportKey = config.enableTeleportKey
 if enableTeleportKey == nil then
-		enableTeleportKey = config.enableSpaceKeybind
-		if enableTeleportKey == nil then enableTeleportKey = true end
+	enableTeleportKey = config.enableSpaceKeybind
+	if enableTeleportKey == nil then
+		enableTeleportKey = true
+	end
 end
 local teleportKeyStr = config.teleportKeyStr or "PageUp"
 local teleportMapType = config.teleportMapType or "Orion"
@@ -159,7 +177,7 @@ local emoteLabels = {
 	[7] = { "o_o", "o_o.", "o_o;" },
 	[8] = { "x_x", "x_X" },
 	[9] = { "^-^", "^_-", "-_-" },
-	[10] = { "<_<", ">_>" }
+	[10] = { "<_<", ">_>" },
 }
 
 local emoteNames = {
@@ -192,162 +210,348 @@ type CameraTransform = {
 	fieldOfView: number,
 }
 local startLocations: { [string]: { [string]: CameraTransform } } = {
-    Orion = {
-        ["Driftball District"] = { position = Vec3.new(0, -3000, -27000), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
-        ["Sparks Supplies"] = { position = Vec3.new(-3616.6, 2623.2, -28411.3), rotation = Quat.fromEuler(0.0, -0.8, 179.7), fieldOfView = 90.0 },
-		["Mainframe"] = { position = Vec3.new(-786.7, 2476.6, -29148.3), rotation = Quat.fromEuler(0.0, -2.1, 31.3), fieldOfView = 80.0 },
-		["Plaza West"] = { position = Vec3.new(2752.6, 18540.0, -29478.3), rotation = Quat.fromEuler(-0.0, -2.0, -0.7), fieldOfView = 80.0 },
-		["Plaza East"] = { position = Vec3.new(-2629.0, 18576.3, -29338.3), rotation = Quat.fromEuler(-0.0, -2.5, -179.5), fieldOfView = 80.0 },
-		["Prime"] = { position = Vec3.new(5.7, 25270.0, -27899.1), rotation = Quat.fromEuler(0.0, -0.9, 90.4), fieldOfView = 80.0 },
-		["4v4 West"] = { position = Vec3.new(-14160.8, 27898.6, -23246.5), rotation = Quat.fromEuler(28.5, -4.9, -89.6), fieldOfView = 90.0 },
-        ["4v4 East"] = { position = Vec3.new(13688.8, 28096.6, -23525.5), rotation = Quat.fromEuler(-30.1, -4.9, -89.6), fieldOfView = 90.0 },
-        ["Fieldhouse"] = { position = Vec3.new(46.5, 22785.3, -29127.5), rotation = Quat.fromEuler(0.0, -5.6, 91.1), fieldOfView = 90.0 },
-        ["Club District"] = { position = Vec3.new(24000, 1000, 14000), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
-        ["Sparks Supplies"] = { position = Vec3.new(22868.9, 6266.6, 17292.1), rotation = Quat.fromEuler(179.3, 60.1, 179.2), fieldOfView = 90.0 },
-		["Mainframe"] = { position = Vec3.new(25653.1, 2461.7, 13850.4), rotation = Quat.fromEuler(137.6, 49.9, 129.0), fieldOfView = 75.0 },
-		["Volleyfall"] = { position = Vec3.new(22496.1, 12093.4, 18064.3), rotation = Quat.fromEuler(129.4, -37.8, 63.2), fieldOfView = 75.0 },
-		["Z-Drift Plaza"] = { position = Vec3.new(6448.4, 6560.7, 3734.8), rotation = Quat.fromEuler(-120.3, 0.5, -89.4), fieldOfView = 90.0 },
-		["Alpha"] = { position = Vec3.new(8734.7, -5412.5, -2669.4), rotation = Quat.fromEuler(-60.2, 0.7, -90.5), fieldOfView = 90.0 },
-		["Beta"] = { position = Vec3.new(7571.8, -5406.4, 4377.9), rotation = Quat.fromEuler(-120.3, -0.6, -90.2), fieldOfView = 90.0 },
-		["Gamma"] = { position = Vec3.new(2049.0, -5450.9, 8889.3), rotation = Quat.fromEuler(179.7, -1.6, -90.4), fieldOfView = 90.0 },
-		["Cargo Bay"] = { position = Vec3.new(133.7, 8087.4, -7414.6), rotation = Quat.fromEuler(0.5, -2.5, -90.2), fieldOfView = 90.0 },
-		["Z-Draft"] = { position = Vec3.new(-6797.9, 8024.8, 4058.9), rotation = Quat.fromEuler(120.0, -2.0, -89.5), fieldOfView = 90.0 },
-		["Parkour District"] = { position = Vec3.new(-24150, 1457, 14100), rotation = Quat.fromEuler(0, 0, 90), fieldOfView = 90 },
-        ["Scraprun"] = { position = Vec3.new(-16857.9, 7397.9, 29016.7), rotation = Quat.fromEuler(-150.0, 1.4, 91.2), fieldOfView = 90.0 },
-        ["DRAFT District"] = { position = Vec3.new(186.2, 1769.9, 28125.7), rotation = Quat.fromEuler(-179.3, 1.4, 91.2), fieldOfView = 90.0 },
-        ["DRAFT Underground"] = { position = Vec3.new(83.3, 3755.6, 29812.3), rotation = Quat.fromEuler(180.0, 3.0, 91.3), fieldOfView = 75.0 },
-		["The Spine"] = { position = Vec3.new(-0.0, -0.0, 0.0), rotation = Quat.fromEuler(0.0, -0.0, 0.0), fieldOfView = 90.0 },
-        ["Driftblitz"] = { position = Vec3.new(27009.3, 5353.3, -211.0), rotation = Quat.fromEuler(90.0, -0.4, 85.5), fieldOfView = 90.0 },
-        ["Baseball"] = { position = Vec3.new(13899.7, 1254.5, 24347.8), rotation = Quat.fromEuler(149.9, -0.4, 85.5), fieldOfView = 90.0 },
-        ["Club Fieldhouse"] = { position = Vec3.new(23232.2, 28749.7, 16914.5), rotation = Quat.fromEuler(-179.5, -53.9, -0.5), fieldOfView = 90.0 },
-		["Space"] = { position = Vec3.new(-373165.7, -3660.2, -314114.9), rotation = Quat.fromEuler(-0.0, -0.0, 0.0), fieldOfView = 90.0 },
+	Orion = {
+		["Driftball District"] = {
+			position = Vec3.new(0, -3000, -27000),
+			rotation = Quat.fromEuler(0, 0, 90),
+			fieldOfView = 90,
+		},
+		["Sparks Supplies"] = {
+			position = Vec3.new(-3616.6, 2623.2, -28411.3),
+			rotation = Quat.fromEuler(0.0, -0.8, 179.7),
+			fieldOfView = 90.0,
+		},
+		["Mainframe"] = {
+			position = Vec3.new(-786.7, 2476.6, -29148.3),
+			rotation = Quat.fromEuler(0.0, -2.1, 31.3),
+			fieldOfView = 80.0,
+		},
+		["Plaza West"] = {
+			position = Vec3.new(2752.6, 18540.0, -29478.3),
+			rotation = Quat.fromEuler(-0.0, -2.0, -0.7),
+			fieldOfView = 80.0,
+		},
+		["Plaza East"] = {
+			position = Vec3.new(-2629.0, 18576.3, -29338.3),
+			rotation = Quat.fromEuler(-0.0, -2.5, -179.5),
+			fieldOfView = 80.0,
+		},
+		["Prime"] = {
+			position = Vec3.new(5.7, 25270.0, -27899.1),
+			rotation = Quat.fromEuler(0.0, -0.9, 90.4),
+			fieldOfView = 80.0,
+		},
+		["4v4 West"] = {
+			position = Vec3.new(-14160.8, 27898.6, -23246.5),
+			rotation = Quat.fromEuler(28.5, -4.9, -89.6),
+			fieldOfView = 90.0,
+		},
+		["4v4 East"] = {
+			position = Vec3.new(13688.8, 28096.6, -23525.5),
+			rotation = Quat.fromEuler(-30.1, -4.9, -89.6),
+			fieldOfView = 90.0,
+		},
+		["Fieldhouse"] = {
+			position = Vec3.new(46.5, 22785.3, -29127.5),
+			rotation = Quat.fromEuler(0.0, -5.6, 91.1),
+			fieldOfView = 90.0,
+		},
+		["Club District"] = {
+			position = Vec3.new(24000, 1000, 14000),
+			rotation = Quat.fromEuler(0, 0, 90),
+			fieldOfView = 90,
+		},
+		["Sparks Supplies"] = {
+			position = Vec3.new(22868.9, 6266.6, 17292.1),
+			rotation = Quat.fromEuler(179.3, 60.1, 179.2),
+			fieldOfView = 90.0,
+		},
+		["Mainframe"] = {
+			position = Vec3.new(25653.1, 2461.7, 13850.4),
+			rotation = Quat.fromEuler(137.6, 49.9, 129.0),
+			fieldOfView = 75.0,
+		},
+		["Volleyfall"] = {
+			position = Vec3.new(22496.1, 12093.4, 18064.3),
+			rotation = Quat.fromEuler(129.4, -37.8, 63.2),
+			fieldOfView = 75.0,
+		},
+		["Z-Drift Plaza"] = {
+			position = Vec3.new(6448.4, 6560.7, 3734.8),
+			rotation = Quat.fromEuler(-120.3, 0.5, -89.4),
+			fieldOfView = 90.0,
+		},
+		["Alpha"] = {
+			position = Vec3.new(8734.7, -5412.5, -2669.4),
+			rotation = Quat.fromEuler(-60.2, 0.7, -90.5),
+			fieldOfView = 90.0,
+		},
+		["Beta"] = {
+			position = Vec3.new(7571.8, -5406.4, 4377.9),
+			rotation = Quat.fromEuler(-120.3, -0.6, -90.2),
+			fieldOfView = 90.0,
+		},
+		["Gamma"] = {
+			position = Vec3.new(2049.0, -5450.9, 8889.3),
+			rotation = Quat.fromEuler(179.7, -1.6, -90.4),
+			fieldOfView = 90.0,
+		},
+		["Cargo Bay"] = {
+			position = Vec3.new(133.7, 8087.4, -7414.6),
+			rotation = Quat.fromEuler(0.5, -2.5, -90.2),
+			fieldOfView = 90.0,
+		},
+		["Z-Draft"] = {
+			position = Vec3.new(-6797.9, 8024.8, 4058.9),
+			rotation = Quat.fromEuler(120.0, -2.0, -89.5),
+			fieldOfView = 90.0,
+		},
+		["Parkour District"] = {
+			position = Vec3.new(-24150, 1457, 14100),
+			rotation = Quat.fromEuler(0, 0, 90),
+			fieldOfView = 90,
+		},
+		["Scraprun"] = {
+			position = Vec3.new(-16857.9, 7397.9, 29016.7),
+			rotation = Quat.fromEuler(-150.0, 1.4, 91.2),
+			fieldOfView = 90.0,
+		},
+		["DRAFT District"] = {
+			position = Vec3.new(186.2, 1769.9, 28125.7),
+			rotation = Quat.fromEuler(-179.3, 1.4, 91.2),
+			fieldOfView = 90.0,
+		},
+		["DRAFT Underground"] = {
+			position = Vec3.new(83.3, 3755.6, 29812.3),
+			rotation = Quat.fromEuler(180.0, 3.0, 91.3),
+			fieldOfView = 75.0,
+		},
+		["The Spine"] = {
+			position = Vec3.new(-0.0, -0.0, 0.0),
+			rotation = Quat.fromEuler(0.0, -0.0, 0.0),
+			fieldOfView = 90.0,
+		},
+		["Driftblitz"] = {
+			position = Vec3.new(27009.3, 5353.3, -211.0),
+			rotation = Quat.fromEuler(90.0, -0.4, 85.5),
+			fieldOfView = 90.0,
+		},
+		["Baseball"] = {
+			position = Vec3.new(13899.7, 1254.5, 24347.8),
+			rotation = Quat.fromEuler(149.9, -0.4, 85.5),
+			fieldOfView = 90.0,
+		},
+		["Club Fieldhouse"] = {
+			position = Vec3.new(23232.2, 28749.7, 16914.5),
+			rotation = Quat.fromEuler(-179.5, -53.9, -0.5),
+			fieldOfView = 90.0,
+		},
+		["Space"] = {
+			position = Vec3.new(-373165.7, -3660.2, -314114.9),
+			rotation = Quat.fromEuler(-0.0, -0.0, 0.0),
+			fieldOfView = 90.0,
+		},
 	},
-    Ares = {
-        ["Ares Plaza"] = { position = Vec3.new(2215.4, -5997.9, 132.4), rotation = Quat.fromEuler(0, 0, -180), fieldOfView = 90 },
-		["Alpha 03"] = { position = Vec3.new(-14.8, -17975.0, -8070.0), rotation = Quat.fromEuler(0, 0, -1), fieldOfView = 90 },
-		["Alpha 02"] = { position = Vec3.new(-17.2, -5940.6, -7962.8), rotation = Quat.fromEuler(0, 0, -1), fieldOfView = 90 },
-		["Alpha 01"] = { position = Vec3.new(-19.6, 5977.0, -8087.2), rotation = Quat.fromEuler(0, 0, -1), fieldOfView = 90 },
-		["Beta 03"] = { position = Vec3.new(6993.7, -18012.6, 4014.6), rotation = Quat.fromEuler(1, -1, -0), fieldOfView = 90 },
-		["Beta 02"] = { position = Vec3.new(7000.7, -5987.9, 4049.0), rotation = Quat.fromEuler(1, -1, -0), fieldOfView = 90 },
-		["Beta 01"]= { position = Vec3.new(6964.6, 6062.1, 4028.4), rotation = Quat.fromEuler(1, -1, -0), fieldOfView = 90 },
-		["Gamma 03"]= {position = Vec3.new(-6992.7, -17947.0, 4031.9), rotation = Quat.fromEuler(-1, 1, -0), fieldOfView = 90 },
-		["Gamma 02"]= { position = Vec3.new(-7001.6, -5993.0, 4024.1), rotation = Quat.fromEuler(-1, 1, -0), fieldOfView = 90 },
-		["Gamma 01"]= {position = Vec3.new(-6985.0, 5999.7, 4031.8), rotation = Quat.fromEuler(-1, 1, -0), fieldOfView = 90 },	
-		["Space"] = { position = Vec3.new(150800.7, 94700.2, -62450.9), rotation = Quat.fromEuler(-0.0, -0.0, 0.0), fieldOfView = 90.0 },
+	Ares = {
+		["Ares Plaza"] = {
+			position = Vec3.new(2215.4, -5997.9, 132.4),
+			rotation = Quat.fromEuler(0, 0, -180),
+			fieldOfView = 90,
+		},
+		["Alpha 03"] = {
+			position = Vec3.new(-14.8, -17975.0, -8070.0),
+			rotation = Quat.fromEuler(0, 0, -1),
+			fieldOfView = 90,
+		},
+		["Alpha 02"] = {
+			position = Vec3.new(-17.2, -5940.6, -7962.8),
+			rotation = Quat.fromEuler(0, 0, -1),
+			fieldOfView = 90,
+		},
+		["Alpha 01"] = {
+			position = Vec3.new(-19.6, 5977.0, -8087.2),
+			rotation = Quat.fromEuler(0, 0, -1),
+			fieldOfView = 90,
+		},
+		["Beta 03"] = {
+			position = Vec3.new(6993.7, -18012.6, 4014.6),
+			rotation = Quat.fromEuler(1, -1, -0),
+			fieldOfView = 90,
+		},
+		["Beta 02"] = {
+			position = Vec3.new(7000.7, -5987.9, 4049.0),
+			rotation = Quat.fromEuler(1, -1, -0),
+			fieldOfView = 90,
+		},
+		["Beta 01"] = {
+			position = Vec3.new(6964.6, 6062.1, 4028.4),
+			rotation = Quat.fromEuler(1, -1, -0),
+			fieldOfView = 90,
+		},
+		["Gamma 03"] = {
+			position = Vec3.new(-6992.7, -17947.0, 4031.9),
+			rotation = Quat.fromEuler(-1, 1, -0),
+			fieldOfView = 90,
+		},
+		["Gamma 02"] = {
+			position = Vec3.new(-7001.6, -5993.0, 4024.1),
+			rotation = Quat.fromEuler(-1, 1, -0),
+			fieldOfView = 90,
+		},
+		["Gamma 01"] = {
+			position = Vec3.new(-6985.0, 5999.7, 4031.8),
+			rotation = Quat.fromEuler(-1, 1, -0),
+			fieldOfView = 90,
+		},
+		["Space"] = {
+			position = Vec3.new(150800.7, 94700.2, -62450.9),
+			rotation = Quat.fromEuler(-0.0, -0.0, 0.0),
+			fieldOfView = 90.0,
+		},
 	},
-    Shuttle = {
-        ["Shuttle"] = { position = Vec3.new(1325, 15, 84), rotation = Quat.fromEuler(0, -5, -53), fieldOfView = 90 },
-    },
+	Shuttle = {
+		["Shuttle"] = { position = Vec3.new(1325, 15, 84), rotation = Quat.fromEuler(0, -5, -53), fieldOfView = 90 },
+	},
 }
 local orionLocationGroups = {
-    {
-        title = "Driftball District",
-        labels = { "Driftball District", "Sparks Supplies", "Mainframe", "Plaza West", "Plaza East", "Prime", "4v4 West", "4v4 East" },
-    },
-    
-    {
-        title = "Parkour District",
-        labels = { "Parkour District", "Scraprun", "DRAFT District", "DRAFT Underground" },
-    },
 	{
-        title = "Orion",
-        labels = { "Space" },
-    }
+		title = "Driftball District",
+		labels = {
+			"Driftball District",
+			"Sparks Supplies",
+			"Mainframe",
+			"Plaza West",
+			"Plaza East",
+			"Prime",
+			"4v4 West",
+			"4v4 East",
+		},
+	},
+
+	{
+		title = "Parkour District",
+		labels = { "Parkour District", "Scraprun", "DRAFT District", "DRAFT Underground" },
+	},
+	{
+		title = "Orion",
+		labels = { "Space" },
+	},
 }
 
 local orionLocationGroups2 = {
-    {
-        title = "Club District",
-        labels = { "Club District", "Sparks Supplies", "Mainframe", "Volleyfall", "Fieldhouse", "Baseball", "Driftblitz" },
-    },
+	{
+		title = "Club District",
+		labels = {
+			"Club District",
+			"Sparks Supplies",
+			"Mainframe",
+			"Volleyfall",
+			"Fieldhouse",
+			"Baseball",
+			"Driftblitz",
+		},
+	},
 	{
 		title = "Z-Drift",
-		labels = { "Z-Drift Plaza", "Cargo Bay", "Alpha", "Beta", "Gamma", "Z-Draft" }
-	}
+		labels = { "Z-Drift Plaza", "Cargo Bay", "Alpha", "Beta", "Gamma", "Z-Draft" },
+	},
 }
 
 local aresLocationGroups = {
-    {
-        title = "Ares",
-        labels = { "Ares Plaza", "Space" },
-    },
-    {
-        title = "Alpha",
-        labels = { "Alpha 01", "Alpha 02", "Alpha 03" },
-    },
-    {
-        title = "Beta",
-        labels = { "Beta 01", "Beta 02", "Beta 03" },
-    },
 	{
-        title = "Gamma",
-        labels = { "Gamma 01", "Gamma 02", "Gamma 03" },
-    },
+		title = "Ares",
+		labels = { "Ares Plaza", "Space" },
+	},
+	{
+		title = "Alpha",
+		labels = { "Alpha 01", "Alpha 02", "Alpha 03" },
+	},
+	{
+		title = "Beta",
+		labels = { "Beta 01", "Beta 02", "Beta 03" },
+	},
+	{
+		title = "Gamma",
+		labels = { "Gamma 01", "Gamma 02", "Gamma 03" },
+	},
 }
 
 local function detectMapType()
-    if not SpectatorGamemodes or not SpectatorGamemodes.listGamemodeIds then
-        return "Orion"
-    end
+	if not SpectatorGamemodes or not SpectatorGamemodes.listGamemodeIds then
+		return "Orion"
+	end
 
-    local gamemodes = SpectatorGamemodes.listGamemodeIds()
-    if #gamemodes == 0 then
-        return "Shuttle"
-    end
+	local gamemodes = SpectatorGamemodes.listGamemodeIds()
+	if #gamemodes == 0 then
+		return "Shuttle"
+	end
 
-    for _, gamemode in ipairs(gamemodes) do
-        if gamemode:find("scraprun") or gamemode:find("TKB_") then
-            return "Orion"
-        elseif gamemode:find("Gamma 0") or gamemode:find("Beta 0") or gamemode:find("Alpha 0") then
-            return "Ares"
-        end
-    end
+	for _, gamemode in ipairs(gamemodes) do
+		if gamemode:find("scraprun") or gamemode:find("TKB_") then
+			return "Orion"
+		elseif gamemode:find("Gamma 0") or gamemode:find("Beta 0") or gamemode:find("Alpha 0") then
+			return "Ares"
+		end
+	end
 
-    return "Orion"
+	return "Orion"
 end
 
 local function drawLocationCombo(comboId, selectedMapType, selectedName)
-    if Gui.beginCombo(comboId, selectedName) then
-        local function drawMapType(MapTypeName, groups)
-            if Gui.collapsingHeader(MapTypeName .. "##" .. comboId .. "_" .. MapTypeName) then
-                local firstGroup = true
-                for _, group in ipairs(groups) do
-                    if not firstGroup then
-                        Gui.separator()
-                    end
-                    firstGroup = false
+	if Gui.beginCombo(comboId, selectedName) then
+		local function drawMapType(MapTypeName, groups)
+			if Gui.collapsingHeader(MapTypeName .. "##" .. comboId .. "_" .. MapTypeName) then
+				local firstGroup = true
+				for _, group in ipairs(groups) do
+					if not firstGroup then
+						Gui.separator()
+					end
+					firstGroup = false
 
-                    for _, locationName in ipairs(group.labels) do
-                        local locationItemId = comboId .. "_" .. MapTypeName .. "_" .. locationName
-                        if startLocations[MapTypeName][locationName] and Gui.selectable(locationName .. "##" .. locationItemId, selectedMapType == MapTypeName and selectedName == locationName) then
-                            selectedMapType = MapTypeName
-                            selectedName = locationName
-                        end
-                    end
-                end
-            end
-        end
+					for _, locationName in ipairs(group.labels) do
+						local locationItemId = comboId .. "_" .. MapTypeName .. "_" .. locationName
+						if
+							startLocations[MapTypeName][locationName]
+							and Gui.selectable(
+								locationName .. "##" .. locationItemId,
+								selectedMapType == MapTypeName and selectedName == locationName
+							)
+						then
+							selectedMapType = MapTypeName
+							selectedName = locationName
+						end
+					end
+				end
+			end
+		end
 
-        drawMapType("Orion", orionLocationGroups)
-        drawMapType("Orion", orionLocationGroups2)
-        drawMapType("Ares", aresLocationGroups)
-        if Gui.collapsingHeader("Shuttle##" .. comboId .. "_Shuttle") then
-            if startLocations.Shuttle and startLocations.Shuttle.Shuttle and Gui.selectable("Shuttle##" .. comboId .. "_ShuttleChoice", selectedMapType == "Shuttle" and selectedName == "Shuttle") then
-                selectedMapType = "Shuttle"
-                selectedName = "Shuttle"
-            end
-        end
+		drawMapType("Orion", orionLocationGroups)
+		drawMapType("Orion", orionLocationGroups2)
+		drawMapType("Ares", aresLocationGroups)
+		if Gui.collapsingHeader("Shuttle##" .. comboId .. "_Shuttle") then
+			if
+				startLocations.Shuttle
+				and startLocations.Shuttle.Shuttle
+				and Gui.selectable(
+					"Shuttle##" .. comboId .. "_ShuttleChoice",
+					selectedMapType == "Shuttle" and selectedName == "Shuttle"
+				)
+			then
+				selectedMapType = "Shuttle"
+				selectedName = "Shuttle"
+			end
+		end
 
-        Gui.endCombo()
-    end
-    return selectedMapType, selectedName
+		Gui.endCombo()
+	end
+	return selectedMapType, selectedName
 end
 
 local defaultSpawnMapType = config.defaultSpawnMapType or "Orion"
 local defaultSpawnName = config.defaultSpawnName or "Driftball District"
 local startLocation = startLocations[defaultSpawnMapType] and startLocations[defaultSpawnMapType][defaultSpawnName]
 if not startLocation then
-    startLocation = startLocations.Orion["Driftball District"]
+	startLocation = startLocations.Orion["Driftball District"]
 end
 
 local pendingGravitySnap = false
@@ -359,6 +563,8 @@ local followSpectatorEnabled = false
 local selectedSpectatorName = ""
 local spectatorSearchText = ""
 local spectatorList = {}
+local matchmakingServerNumber = ""
+local matchmakingStatus = ""
 local debugLocationName = "New Location"
 local showLocationWriter = config.showLocationWriter or false
 
@@ -373,12 +579,14 @@ local zDriftBallRadius = config.zDriftBallRadius or config.zDriftBallScale or 40
 local zDriftBallThickness = config.zDriftBallThickness or 0.3
 local zDriftBallMaxBalls = math.clamp(math.floor(config.zDriftBallMaxBalls or 1), 1, 20)
 local savedZDriftBallColor = config.zDriftBallColor
-local zDriftBallColor = savedZDriftBallColor and LinearColor.new(
-	savedZDriftBallColor.r or 1,
-	savedZDriftBallColor.g or 1,
-	savedZDriftBallColor.b or 1,
-	savedZDriftBallColor.a or 1
-) or LinearColor.new(1, 1, 1, 1)
+local zDriftBallColor = savedZDriftBallColor
+		and LinearColor.new(
+			savedZDriftBallColor.r or 1,
+			savedZDriftBallColor.g or 1,
+			savedZDriftBallColor.b or 1,
+			savedZDriftBallColor.a or 1
+		)
+	or LinearColor.new(1, 1, 1, 1)
 
 local flipActive = false
 local flipDirection = 1
@@ -394,31 +602,109 @@ local availableKeybindCategories = {
 	{
 		name = "Keyboard",
 		keys = {
-			"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", 
-			"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-			"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
-			"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
-			"SpaceBar", "LeftBracket", "RightBracket", "PageUp", "PageDown", "Home", "End", "Insert", "Delete",
-			"Up", "Down", "Left", "Right", 
-			"LeftShift", "RightShift", "LeftControl", "RightControl", "LeftAlt", "RightAlt", 
-			"Tab", "Enter", "Escape", "Backspace", "Tilde"
-		}
+			"A",
+			"B",
+			"C",
+			"D",
+			"E",
+			"F",
+			"G",
+			"H",
+			"I",
+			"J",
+			"K",
+			"L",
+			"M",
+			"N",
+			"O",
+			"P",
+			"Q",
+			"R",
+			"S",
+			"T",
+			"U",
+			"V",
+			"W",
+			"X",
+			"Y",
+			"Z",
+			"0",
+			"1",
+			"2",
+			"3",
+			"4",
+			"5",
+			"6",
+			"7",
+			"8",
+			"9",
+			"F1",
+			"F2",
+			"F3",
+			"F4",
+			"F5",
+			"F6",
+			"F7",
+			"F8",
+			"F9",
+			"F10",
+			"F11",
+			"F12",
+			"SpaceBar",
+			"LeftBracket",
+			"RightBracket",
+			"PageUp",
+			"PageDown",
+			"Home",
+			"End",
+			"Insert",
+			"Delete",
+			"Up",
+			"Down",
+			"Left",
+			"Right",
+			"LeftShift",
+			"RightShift",
+			"LeftControl",
+			"RightControl",
+			"LeftAlt",
+			"RightAlt",
+			"Tab",
+			"Enter",
+			"Escape",
+			"Backspace",
+			"Tilde",
+		},
 	},
 	{
 		name = "Mouse",
 		keys = {
-			"MouseLeft", "MouseRight", "MouseMiddle", "MouseSide1", "MouseSide2"
-		}
+			"MouseLeft",
+			"MouseRight",
+			"MouseMiddle",
+			"MouseSide1",
+			"MouseSide2",
+		},
 	},
 	{
 		name = "Controller",
 		keys = {
-			"ControllerLeftTrigger", "ControllerRightTrigger", "ControllerLeftBumper", "ControllerRightBumper",
-			"ControllerFaceUp", "ControllerFaceDown", "ControllerFaceLeft", "ControllerFaceRight",
-			"ControllerDPadUp", "ControllerDPadDown", "ControllerDPadLeft", "ControllerDPadRight",
-			"ControllerLeftStickClick", "ControllerRightStickClick"
-		}
-	}
+			"ControllerLeftTrigger",
+			"ControllerRightTrigger",
+			"ControllerLeftBumper",
+			"ControllerRightBumper",
+			"ControllerFaceUp",
+			"ControllerFaceDown",
+			"ControllerFaceLeft",
+			"ControllerFaceRight",
+			"ControllerDPadUp",
+			"ControllerDPadDown",
+			"ControllerDPadLeft",
+			"ControllerDPadRight",
+			"ControllerLeftStickClick",
+			"ControllerRightStickClick",
+		},
+	},
 }
 
 local keybindSearchStates = {}
@@ -431,12 +717,24 @@ local function drawKeybindCombo(comboId, currentVal)
 
 		Gui.setNextItemWidth(250)
 		keybindSearchStates[comboId] = Gui.inputText(Icon.Search .. comboId, keybindSearchStates[comboId])
-		
+
 		Gui.beginTabBar("Filters##" .. comboId)
-		if Gui.beginTabItem("All") then keybindFilterStates[comboId] = "All"; Gui.endTabItem() end
-		if Gui.beginTabItem("Keyboard") then keybindFilterStates[comboId] = "Keyboard"; Gui.endTabItem() end
-		if Gui.beginTabItem("Mouse") then keybindFilterStates[comboId] = "Mouse"; Gui.endTabItem() end
-		if Gui.beginTabItem("Controller") then keybindFilterStates[comboId] = "Controller"; Gui.endTabItem() end
+		if Gui.beginTabItem("All") then
+			keybindFilterStates[comboId] = "All"
+			Gui.endTabItem()
+		end
+		if Gui.beginTabItem("Keyboard") then
+			keybindFilterStates[comboId] = "Keyboard"
+			Gui.endTabItem()
+		end
+		if Gui.beginTabItem("Mouse") then
+			keybindFilterStates[comboId] = "Mouse"
+			Gui.endTabItem()
+		end
+		if Gui.beginTabItem("Controller") then
+			keybindFilterStates[comboId] = "Controller"
+			Gui.endTabItem()
+		end
 		Gui.endTabBar()
 
 		local filter = keybindFilterStates[comboId]
@@ -554,19 +852,40 @@ local function getZDriftBallMesh(subdivision: number)
 
 	local goldenRatio = (1 + math.sqrt(5)) / 2
 	local baseVertices = {
-		Vec3.new(-1, goldenRatio, 0), Vec3.new(1, goldenRatio, 0),
-		Vec3.new(-1, -goldenRatio, 0), Vec3.new(1, -goldenRatio, 0),
-		Vec3.new(0, -1, goldenRatio), Vec3.new(0, 1, goldenRatio),
-		Vec3.new(0, -1, -goldenRatio), Vec3.new(0, 1, -goldenRatio),
-		Vec3.new(goldenRatio, 0, -1), Vec3.new(goldenRatio, 0, 1),
-		Vec3.new(-goldenRatio, 0, -1), Vec3.new(-goldenRatio, 0, 1),
+		Vec3.new(-1, goldenRatio, 0),
+		Vec3.new(1, goldenRatio, 0),
+		Vec3.new(-1, -goldenRatio, 0),
+		Vec3.new(1, -goldenRatio, 0),
+		Vec3.new(0, -1, goldenRatio),
+		Vec3.new(0, 1, goldenRatio),
+		Vec3.new(0, -1, -goldenRatio),
+		Vec3.new(0, 1, -goldenRatio),
+		Vec3.new(goldenRatio, 0, -1),
+		Vec3.new(goldenRatio, 0, 1),
+		Vec3.new(-goldenRatio, 0, -1),
+		Vec3.new(-goldenRatio, 0, 1),
 	}
 	local faces = {
-		{ 6, 12, 1 }, { 6, 1, 2 }, { 6, 2, 10 }, { 6, 10, 5 },
-		{ 6, 5, 12 }, { 7, 3, 11 }, { 7, 11, 8 }, { 7, 8, 9 },
-		{ 7, 9, 4 }, { 7, 4, 3 }, { 1, 11, 12 }, { 1, 2, 8 },
-		{ 2, 10, 9 }, { 10, 5, 4 }, { 5, 12, 3 }, { 11, 8, 1 },
-		{ 8, 9, 2 }, { 9, 4, 10 }, { 4, 3, 5 }, { 3, 11, 12 }
+		{ 6, 12, 1 },
+		{ 6, 1, 2 },
+		{ 6, 2, 10 },
+		{ 6, 10, 5 },
+		{ 6, 5, 12 },
+		{ 7, 3, 11 },
+		{ 7, 11, 8 },
+		{ 7, 8, 9 },
+		{ 7, 9, 4 },
+		{ 7, 4, 3 },
+		{ 1, 11, 12 },
+		{ 1, 2, 8 },
+		{ 2, 10, 9 },
+		{ 10, 5, 4 },
+		{ 5, 12, 3 },
+		{ 11, 8, 1 },
+		{ 8, 9, 2 },
+		{ 9, 4, 10 },
+		{ 4, 3, 5 },
+		{ 3, 11, 12 },
 	}
 
 	local vertices = {}
@@ -588,11 +907,9 @@ local function getZDriftBallMesh(subdivision: number)
 
 			local first = vertices[firstIndex]
 			local second = vertices[secondIndex]
-			local midpoint = normalizeZDriftBallPoint(Vec3.new(
-				(first.x + second.x) / 2,
-				(first.y + second.y) / 2,
-				(first.z + second.z) / 2
-			))
+			local midpoint = normalizeZDriftBallPoint(
+				Vec3.new((first.x + second.x) / 2, (first.y + second.y) / 2, (first.z + second.z) / 2)
+			)
 			table.insert(vertices, midpoint)
 			local midpointIndex = #vertices
 			midpointCache[key] = midpointIndex
@@ -686,8 +1003,17 @@ end
 
 local function formatLocationLine(locationName: string, pos: Vec3, rot: Quat, fov: number): string
 	local euler = rot:euler()
-	return string.format('		["%s"] = { position = Vec3.new(%.1f, %.1f, %.1f), rotation = Quat.fromEuler(%.1f, %.1f, %.1f), fieldOfView = %.1f },',
-		locationName, pos.x, pos.y, pos.z, euler.x, euler.y, euler.z, fov)
+	return string.format(
+		'		["%s"] = { position = Vec3.new(%.1f, %.1f, %.1f), rotation = Quat.fromEuler(%.1f, %.1f, %.1f), fieldOfView = %.1f },',
+		locationName,
+		pos.x,
+		pos.y,
+		pos.z,
+		euler.x,
+		euler.y,
+		euler.z,
+		fov
+	)
 end
 
 local function getTabTitle(icon: string, name: string)
@@ -753,7 +1079,19 @@ function onGui()
 	local serverSpectatorCount = serverGameData and serverGameData.spectators and #serverGameData.spectators or 0
 	local spectatorLabel = serverSpectatorCount == 1 and "Spectator" or "Spectators"
 	Gui.sameLine()
-	Gui.textDisabled(serverName .. "   |   " .. Icon.Users .. "  " .. tostring(serverPlayerCount) .. " Players   |   " .. Icon.Eye .. "  " .. tostring(serverSpectatorCount) .. " " .. spectatorLabel)
+	Gui.textDisabled(
+		serverName
+			.. "   |   "
+			.. Icon.Users
+			.. "  "
+			.. tostring(serverPlayerCount)
+			.. " Players   |   "
+			.. Icon.Eye
+			.. "  "
+			.. tostring(serverSpectatorCount)
+			.. " "
+			.. spectatorLabel
+	)
 
 	Gui.beginTabBar("FreecamTabs")
 
@@ -764,13 +1102,17 @@ function onGui()
 		if newShowNameTags ~= config.showNameTags then
 			config.showNameTags = newShowNameTags
 			camera.showNameTags = config.showNameTags
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		local newAlignToGravity = Gui.checkbox("Automatically Align to Gravity", Inputs.alignToGravity)
 		if newAlignToGravity ~= Inputs.alignToGravity then
 			Inputs.alignToGravity = newAlignToGravity
 			config.alignToGravity = newAlignToGravity
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if detectMapType() == "Orion" and isInsideGravityRegion(camera.position) then
 			Gui.sameLine()
@@ -785,7 +1127,9 @@ function onGui()
 		if newLocalMovementAxes ~= Inputs.localMovementAxesDefault then
 			Inputs.localMovementAxesDefault = newLocalMovementAxes
 			config.localMovementAxesDefault = newLocalMovementAxes
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.setItemTooltip("Use Alt to switch between gravity and local movement axes")
 
@@ -795,19 +1139,25 @@ function onGui()
 		if newMoveSpeed ~= moveSpeed then
 			moveSpeed = newMoveSpeed
 			config.moveSpeed = newMoveSpeed
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		local newMouseSensitivity = Gui.sliderFloat("Mouse Sensitivity", mouseSensitivity, 0, 10)
 		if newMouseSensitivity ~= mouseSensitivity then
 			mouseSensitivity = newMouseSensitivity
 			config.mouseSensitivity = newMouseSensitivity
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		local newSpeedAdjustmentRate = Gui.sliderFloat("Speed Acceleration", Inputs.speedAdjustmentRate, 0, 5)
 		if newSpeedAdjustmentRate ~= Inputs.speedAdjustmentRate then
 			Inputs.speedAdjustmentRate = newSpeedAdjustmentRate
 			config.speedAdjustmentRate = newSpeedAdjustmentRate
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.setItemTooltip("How fast the speed adjustment buttons affect the camera speed")
 
@@ -822,20 +1172,24 @@ function onGui()
 			Inputs.smoothing = newSmoothing
 			config.smoothing = newSmoothing
 			Util.setSmoothing(Inputs.smoothing, Inputs)
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if newLookSmoothness ~= Inputs.lookSmoothness then
 			Inputs.lookSmoothness = newLookSmoothness
 			config.lookSmoothness = newLookSmoothness
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
-		
+
 		Gui.separatorText("Camera Controls")
 
 		camera.position = Gui.dragFloat3("Position", camera.position, 10, -100000, 100000)
 		local newRot = Gui.dragFloat3("Rotation", Inputs.rotEuler, 1, -180, 180)
 		Gui.sameLine()
-			Gui.textDisabled("roll, pitch, yaw")
+		Gui.textDisabled("roll, pitch, yaw")
 		if Gui.isItemActive() then
 			gravityChaser = gravity.upRotation
 			Inputs.rotEuler = newRot
@@ -845,7 +1199,7 @@ function onGui()
 
 		Gui.newLine()
 
-		if Gui.collapsingHeader("Emotes") then	
+		if Gui.collapsingHeader("Emotes") then
 			Emotes.onGui()
 
 			local currentEmoteId = camera:getEmote() or 0
@@ -873,22 +1227,26 @@ function onGui()
 			if newEmoteCycling ~= emoteCycling then
 				emoteCycling = newEmoteCycling
 				config.emoteCycling = emoteCycling
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 			Gui.setItemTooltip("Enable cycling through emotes")
 
 			if emoteCycling then
 				Gui.sameLine()
-                local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
+				local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
 				if newEmoteCycleInterval ~= emoteCycleInterval then
 					emoteCycleInterval = newEmoteCycleInterval
 					config.emoteCycleInterval = emoteCycleInterval
-					if saveConfig then saveConfig() end
+					if saveConfig then
+						saveConfig()
+					end
 				end
-            end
+			end
 		end
 
-				if Gui.collapsingHeader("Screenshots") then
+		if Gui.collapsingHeader("Screenshots") then
 			local presetMap = {
 				["1K"] = {
 					["16:9"] = { 1920, 1080 },
@@ -938,12 +1296,16 @@ function onGui()
 
 			local qualityList = { "1K", "2K", "4K" }
 			for i, q in ipairs(qualityList) do
-				if i > 1 then Gui.sameLine() end
+				if i > 1 then
+					Gui.sameLine()
+				end
 				drawOption(q, activeQuality == q, function()
 					local res = presetMap[q][targetAspect]
 					screenshotWidth, screenshotHeight = res[1], res[2]
 					config.screenshotWidth, config.screenshotHeight = screenshotWidth, screenshotHeight
-					if saveConfig then saveConfig() end
+					if saveConfig then
+						saveConfig()
+					end
 				end)
 			end
 
@@ -953,12 +1315,16 @@ function onGui()
 
 			local aspectList = { "16:9", "9:16", "4:3", "Ultrawide" }
 			for i, a in ipairs(aspectList) do
-				if i > 1 then Gui.sameLine() end
+				if i > 1 then
+					Gui.sameLine()
+				end
 				drawOption(a, activeAspect == a, function()
 					local res = presetMap[targetQuality][a]
 					screenshotWidth, screenshotHeight = res[1], res[2]
 					config.screenshotWidth, config.screenshotHeight = screenshotWidth, screenshotHeight
-					if saveConfig then saveConfig() end
+					if saveConfig then
+						saveConfig()
+					end
 				end)
 			end
 
@@ -973,7 +1339,9 @@ function onGui()
 				screenshotHeight = newHeight
 				config.screenshotWidth = screenshotWidth
 				config.screenshotHeight = screenshotHeight
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 
 			Gui.separator()
@@ -993,7 +1361,8 @@ function onGui()
 
 			if Gui.beginCombo("##SpawnLocationCombo", defaultSpawnName) then
 				Gui.setNextItemWidth(300)
-				defaultSpawnSearchText = Gui.inputText(Icon.Search .. "  Search##DefaultSpawnSearch", defaultSpawnSearchText)
+				defaultSpawnSearchText =
+					Gui.inputText(Icon.Search .. "  Search##DefaultSpawnSearch", defaultSpawnSearchText)
 				local search = string.lower(defaultSpawnSearchText)
 
 				Gui.beginTabBar("DefaultSpawnMapTabs")
@@ -1009,13 +1378,18 @@ function onGui()
 							firstGroup = false
 
 							for _, locName in ipairs(group.labels) do
-								if startLocations.Orion[locName] and (search == "" or string.find(string.lower(locName), search, 1, true)) then
+								if
+									startLocations.Orion[locName]
+									and (search == "" or string.find(string.lower(locName), search, 1, true))
+								then
 									if Gui.selectable(locName, defaultSpawnName == locName) then
 										defaultSpawnMapType = "Orion"
 										defaultSpawnName = locName
 										config.defaultSpawnMapType = defaultSpawnMapType
 										config.defaultSpawnName = defaultSpawnName
-										if saveConfig then saveConfig() end
+										if saveConfig then
+											saveConfig()
+										end
 									end
 								end
 							end
@@ -1034,13 +1408,18 @@ function onGui()
 						firstGroup = false
 
 						for _, locName in ipairs(group.labels) do
-							if startLocations.Ares[locName] and (search == "" or string.find(string.lower(locName), search, 1, true)) then
+							if
+								startLocations.Ares[locName]
+								and (search == "" or string.find(string.lower(locName), search, 1, true))
+							then
 								if Gui.selectable(locName, defaultSpawnName == locName) then
 									defaultSpawnMapType = "Ares"
 									defaultSpawnName = locName
 									config.defaultSpawnMapType = defaultSpawnMapType
 									config.defaultSpawnName = defaultSpawnName
-									if saveConfig then saveConfig() end
+									if saveConfig then
+										saveConfig()
+									end
 								end
 							end
 						end
@@ -1049,13 +1428,19 @@ function onGui()
 				end
 
 				if Gui.beginTabItem("Shuttle") then
-					if startLocations.Shuttle and startLocations.Shuttle["Shuttle"] and (search == "" or string.find("shuttle", search, 1, true)) then
+					if
+						startLocations.Shuttle
+						and startLocations.Shuttle["Shuttle"]
+						and (search == "" or string.find("shuttle", search, 1, true))
+					then
 						if Gui.selectable("Shuttle##tp", defaultSpawnName == "Shuttle") then
 							defaultSpawnMapType = "Shuttle"
 							defaultSpawnName = "Shuttle"
 							config.defaultSpawnMapType = defaultSpawnMapType
 							config.defaultSpawnName = defaultSpawnName
-							if saveConfig then saveConfig() end
+							if saveConfig then
+								saveConfig()
+							end
 						end
 					end
 					Gui.endTabItem()
@@ -1121,20 +1506,21 @@ function onGui()
 		if showLocationWriter then
 			if Gui.collapsingHeader("Location Writer##debugLocationWriter") then
 				Gui.textDisabled("Debug tool to make more locations")
-				
+
 				Gui.setNextItemWidth(300)
 				debugLocationName = Gui.inputText("##LocationNameInput", debugLocationName)
 				Gui.sameLine()
 				Gui.textDisabled("Location name")
-				
+
 				if Gui.button("Send to logs##captureLocation") then
-					local line = formatLocationLine(debugLocationName, camera.position, camera.rotation, camera.fieldOfView)
+					local line =
+						formatLocationLine(debugLocationName, camera.position, camera.rotation, camera.fieldOfView)
 					print(line)
 				end
 			end
 		end
 
-        Gui.newLine()
+		Gui.newLine()
 
 		Gui.endTabItem()
 	end
@@ -1185,7 +1571,9 @@ function onGui()
 		enableShowNameTagsKey = Gui.checkbox(Icon.Eye .. "  Toggle name tags", enableShowNameTagsKey)
 		if enableShowNameTagsKey ~= config.enableShowNameTagsKey then
 			config.enableShowNameTagsKey = enableShowNameTagsKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.sameLine()
 		if not enableShowNameTagsKey then
@@ -1196,7 +1584,9 @@ function onGui()
 		if newShowNameTagsKey ~= showNameTagsKeyStr then
 			showNameTagsKeyStr = newShowNameTagsKey
 			config.showNameTagsKeyStr = showNameTagsKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableShowNameTagsKey then
 			Gui.endDisabled()
@@ -1209,7 +1599,9 @@ function onGui()
 		enableAlignToGravityKey = Gui.checkbox(Icon.ArrowDown .. "  Align to gravity", enableAlignToGravityKey)
 		if enableAlignToGravityKey ~= config.enableAlignToGravityKey then
 			config.enableAlignToGravityKey = enableAlignToGravityKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.sameLine()
 		if not enableAlignToGravityKey then
@@ -1220,7 +1612,9 @@ function onGui()
 		if newAlignToGravityKey ~= alignToGravityKeyStr then
 			alignToGravityKeyStr = newAlignToGravityKey
 			config.alignToGravityKeyStr = alignToGravityKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableAlignToGravityKey then
 			Gui.endDisabled()
@@ -1233,7 +1627,9 @@ function onGui()
 		enableScreenshotKey = Gui.checkbox(Icon.Camera .. "  Screenshot", enableScreenshotKey)
 		if enableScreenshotKey ~= config.enableScreenshotKey then
 			config.enableScreenshotKey = enableScreenshotKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.sameLine()
 		if not enableScreenshotKey then
@@ -1244,7 +1640,9 @@ function onGui()
 		if newScreenshotKey ~= screenshotKeyStr then
 			screenshotKeyStr = newScreenshotKey
 			config.screenshotKeyStr = screenshotKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableScreenshotKey then
 			Gui.endDisabled()
@@ -1264,11 +1662,15 @@ function onGui()
 		if newDisconnectKey ~= disconnectKeyStr then
 			disconnectKeyStr = newDisconnectKey
 			config.disconnectKeyStr = disconnectKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if enableDisconnectKey ~= config.enableDisconnectKey then
 			config.enableDisconnectKey = enableDisconnectKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableDisconnectKey then
 			Gui.endDisabled()
@@ -1281,7 +1683,9 @@ function onGui()
 		enableFreecamKey = Gui.checkbox(Icon.CameraRetro .. "  Freecam##EnableFree", enableFreecamKey)
 		if enableFreecamKey ~= config.enableFreecamKey then
 			config.enableFreecamKey = enableFreecamKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.sameLine()
 		if not enableFreecamKey then
@@ -1292,7 +1696,9 @@ function onGui()
 		if newFreecamKey ~= freecamKeyStr then
 			freecamKeyStr = newFreecamKey
 			config.freecamKeyStr = freecamKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableFreecamKey then
 			Gui.endDisabled()
@@ -1305,7 +1711,9 @@ function onGui()
 		enableHandcamKey = Gui.checkbox(Icon.User .. "  Handcam##EnableHand", enableHandcamKey)
 		if enableHandcamKey ~= config.enableHandcamKey then
 			config.enableHandcamKey = enableHandcamKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		Gui.sameLine()
 		if not enableHandcamKey then
@@ -1316,7 +1724,9 @@ function onGui()
 		if newHandcamKey ~= handcamKeyStr then
 			handcamKeyStr = newHandcamKey
 			config.handcamKeyStr = handcamKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableHandcamKey then
 			Gui.endDisabled()
@@ -1336,11 +1746,15 @@ function onGui()
 		if newEmoteToggleKey ~= emoteToggleKeyStr then
 			emoteToggleKeyStr = newEmoteToggleKey
 			config.emoteToggleKeyStr = emoteToggleKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if enableEmoteToggleKey ~= config.enableEmoteToggleKey then
 			config.enableEmoteToggleKey = enableEmoteToggleKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if parseKeyStr(emoteToggleKeyStr) == nil then
 			Gui.sameLine()
@@ -1356,7 +1770,9 @@ function onGui()
 				if Gui.selectable(label, emoteToggleId == id) then
 					emoteToggleId = id
 					config.emoteToggleId = emoteToggleId
-					if saveConfig then saveConfig() end
+					if saveConfig then
+						saveConfig()
+					end
 				end
 			end
 			Gui.endCombo()
@@ -1365,7 +1781,8 @@ function onGui()
 			Gui.endDisabled()
 		end
 
-		enableTeleportKey = Gui.checkbox(Icon.LocationArrow .. "  Teleport to location##EnableTeleport", enableTeleportKey)
+		enableTeleportKey =
+			Gui.checkbox(Icon.LocationArrow .. "  Teleport to location##EnableTeleport", enableTeleportKey)
 		Gui.sameLine()
 		if not enableTeleportKey then
 			Gui.beginDisabled()
@@ -1375,11 +1792,15 @@ function onGui()
 		if newTeleportKey ~= teleportKeyStr then
 			teleportKeyStr = newTeleportKey
 			config.teleportKeyStr = teleportKeyStr
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if enableTeleportKey ~= config.enableTeleportKey then
 			config.enableTeleportKey = enableTeleportKey
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if parseKeyStr(teleportKeyStr) == nil then
 			Gui.sameLine()
@@ -1394,7 +1815,9 @@ function onGui()
 			teleportName = newTeleportName
 			config.teleportMapType = teleportMapType
 			config.teleportName = teleportName
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		if not enableTeleportKey then
 			Gui.endDisabled()
@@ -1408,14 +1831,18 @@ function onGui()
 		if newShowModelsTab ~= showModelsTab then
 			showModelsTab = newShowModelsTab
 			config.showModelsTab = showModelsTab
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local newShowReplayTab = Gui.checkbox("Show Replay tab", showReplayTab)
 		if newShowReplayTab ~= showReplayTab then
 			showReplayTab = newShowReplayTab
 			config.showReplayTab = showReplayTab
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local tabTitleModeLabel = "Icon + name"
@@ -1424,22 +1851,28 @@ function onGui()
 		elseif tabTitleMode == "icon" then
 			tabTitleModeLabel = "Icon"
 		end
-		
+
 		if Gui.beginCombo("Tab Item Style", tabTitleModeLabel) then
 			if Gui.selectable("Icon + name", tabTitleMode == "icon+name") then
 				tabTitleMode = "icon+name"
 				config.tabTitleMode = tabTitleMode
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 			if Gui.selectable("Name", tabTitleMode == "name") then
 				tabTitleMode = "name"
 				config.tabTitleMode = tabTitleMode
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 			if Gui.selectable("Icon", tabTitleMode == "icon") then
 				tabTitleMode = "icon"
 				config.tabTitleMode = tabTitleMode
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 			Gui.endCombo()
 		end
@@ -1455,7 +1888,9 @@ function onGui()
 			config.ownerName = ownerName
 			config.ownerId = nil
 			config.currentPlayerId = nil
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		Gui.newLine()
@@ -1467,7 +1902,9 @@ function onGui()
 			Inputs.ballScaleMultiplier = newBallScaleMultiplier
 			config.ballScaleMultiplier = newBallScaleMultiplier
 			spectatorDebug.replayBallScaleMultiplier = Inputs.ballScaleMultiplier
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local newPlaceBallEnabled = Gui.checkbox("'Place Ball' visuals", Inputs.placeBallEnabled)
@@ -1475,7 +1912,9 @@ function onGui()
 			Inputs.placeBallEnabled = newPlaceBallEnabled
 			config.placeBallEnabled = newPlaceBallEnabled
 			spectatorDebug.placeBallHereVisuals = Inputs.placeBallEnabled
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local newGoalExplosions = Gui.checkbox("Goal explosions", Inputs.playGoalExplosions)
@@ -1483,14 +1922,18 @@ function onGui()
 			Inputs.playGoalExplosions = newGoalExplosions
 			config.playGoalExplosions = newGoalExplosions
 			spectatorDebug.goalExplosions = Inputs.playGoalExplosions
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local newZDriftBallOutlineEnabled = Gui.checkbox("Z-Drift ball outline", zDriftBallOutlineEnabled)
 		if newZDriftBallOutlineEnabled ~= zDriftBallOutlineEnabled then
 			zDriftBallOutlineEnabled = newZDriftBallOutlineEnabled
 			config.zDriftBallOutlineEnabled = zDriftBallOutlineEnabled
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		if zDriftBallOutlineEnabled then
@@ -1508,42 +1951,54 @@ function onGui()
 				config.zDriftBallMaxBalls = 1
 				config.zDriftBallColor = { r = 1, g = 1, b = 1, a = 1 }
 
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 
 			local newZDriftBallSubdivision = Gui.sliderInt("Detail", zDriftBallSubdivision, 2, 4)
 			if newZDriftBallSubdivision ~= zDriftBallSubdivision then
 				zDriftBallSubdivision = newZDriftBallSubdivision
 				config.zDriftBallSubdivision = zDriftBallSubdivision
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 
 			local newZDriftBallRadius = Gui.sliderFloat("Outline size", zDriftBallRadius, 30, 60)
 			if newZDriftBallRadius ~= zDriftBallRadius then
 				zDriftBallRadius = newZDriftBallRadius
 				config.zDriftBallRadius = zDriftBallRadius
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 
 			local newZDriftBallThickness = Gui.sliderFloat("Line thickness", zDriftBallThickness, 0.01, 0.8)
 			if newZDriftBallThickness ~= zDriftBallThickness then
 				zDriftBallThickness = newZDriftBallThickness
 				config.zDriftBallThickness = zDriftBallThickness
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 
 			local newZDriftBallMaxBalls = Gui.sliderInt("Max balls to use outline on", zDriftBallMaxBalls, 1, 20)
 			if newZDriftBallMaxBalls ~= zDriftBallMaxBalls then
 				zDriftBallMaxBalls = newZDriftBallMaxBalls
 				config.zDriftBallMaxBalls = zDriftBallMaxBalls
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 
 			local newZDriftBallColor = Gui.colorEdit("Color", zDriftBallColor)
-			if newZDriftBallColor.r ~= zDriftBallColor.r
+			if
+				newZDriftBallColor.r ~= zDriftBallColor.r
 				or newZDriftBallColor.g ~= zDriftBallColor.g
 				or newZDriftBallColor.b ~= zDriftBallColor.b
-				or newZDriftBallColor.a ~= zDriftBallColor.a then
+				or newZDriftBallColor.a ~= zDriftBallColor.a
+			then
 				zDriftBallColor = newZDriftBallColor
 				config.zDriftBallColor = {
 					r = zDriftBallColor.r,
@@ -1551,7 +2006,9 @@ function onGui()
 					b = zDriftBallColor.b,
 					a = zDriftBallColor.a,
 				}
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 			end
 		end
 
@@ -1563,19 +2020,25 @@ function onGui()
 		if newCollisionEnabled ~= collisionEnabled then
 			collisionEnabled = newCollisionEnabled
 			config.collisionEnabled = collisionEnabled
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
 		if newShowAxisDebug ~= config.showAxisDebug then
 			config.showAxisDebug = newShowAxisDebug
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local newShowLocationWriter = Gui.checkbox("Show Location Writer##debugShowLocationWriter", showLocationWriter)
 		if newShowLocationWriter ~= showLocationWriter then
 			showLocationWriter = newShowLocationWriter
 			config.showLocationWriter = showLocationWriter
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
@@ -1583,13 +2046,31 @@ function onGui()
 			Inputs.playScraprunSpinners = newScraprunSpinners
 			config.playScraprunSpinners = newScraprunSpinners
 			spectatorDebug.scrapRunSpinners = Inputs.playScraprunSpinners
-			if saveConfig then saveConfig() end
+			if saveConfig then
+				saveConfig()
+			end
 		end
 
 		Gui.endTabItem()
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Users, "Players")) then
+		if Gui.collapsingHeader("Join Matchmaking Server") then
+			Gui.setNextItemWidth(100)
+			matchmakingServerNumber = Gui.inputText("Server number", matchmakingServerNumber)
+			Gui.sameLine()
+			if Gui.button("Join") then
+				local serverNumber = matchmakingServerNumber:gsub("^%s+", ""):gsub("%s+$", "")
+				local stationName = serverNumber == "" and "Matchmaking" or "Matchmaking_" .. serverNumber
+				local connected = Network.connectToServer(stationName)
+				matchmakingStatus = connected and ("Joining " .. stationName) or ("Failed to join " .. stationName)
+			end
+			if matchmakingStatus ~= "" then
+				Gui.sameLine()
+				Gui.textDisabled(matchmakingStatus)
+			end
+		end
+
 		local players = {}
 		local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
 
@@ -1601,7 +2082,10 @@ function onGui()
 					if pInfo and pInfo.playerId then
 						local p = session.getPlayerById and session:getPlayerById(pInfo.playerId) or pInfo
 						if p and p.playerName then
-							table.insert(players, { id = pInfo.playerId, sessionIndex = i, name = p.playerName, object = p })
+							table.insert(
+								players,
+								{ id = pInfo.playerId, sessionIndex = i, name = p.playerName, object = p }
+							)
 						end
 					end
 				end
@@ -1628,49 +2112,55 @@ function onGui()
 			end
 		end
 
-        local selectedSpectator = nil
-        if selectedSpectatorName ~= "" then
-            for _, spec in ipairs(spectatorList) do
-                local name = spec.playerName or ("Spectator #" .. spec.playerId)
-                if name == selectedSpectatorName then selectedSpectator = spec; break end
-            end
-        end
+		local selectedSpectator = nil
+		if selectedSpectatorName ~= "" then
+			for _, spec in ipairs(spectatorList) do
+				local name = spec.playerName or ("Spectator #" .. spec.playerId)
+				if name == selectedSpectatorName then
+					selectedSpectator = spec
+					break
+				end
+			end
+		end
 
-        Gui.beginChild("playerCountBox", 140, 70, true)
-        Gui.textDisabled(Icon.Users .. "  Players")
-        Gui.text(tostring(#players))
-        Gui.endChild()
-        
-        Gui.sameLine()
-        
-        Gui.beginChild("spectatorCountBox", 140, 70, true)
-        Gui.textDisabled(Icon.Eye .. "  Spectators")
-        Gui.text(tostring(#spectatorList))
-        Gui.endChild()
+		Gui.beginChild("playerCountBox", 140, 70, true)
+		Gui.textDisabled(Icon.Users .. "  Players")
+		Gui.text(tostring(#players))
+		Gui.endChild()
 
-        Gui.sameLine()
+		Gui.sameLine()
 
-        Gui.beginChild("targetStatusBox", 200, 70, true)
-        Gui.textDisabled(Icon.ChevronRight .. "  Spectator Target")
-        Gui.text(selectedSpectatorName ~= "" and selectedSpectatorName or "None")
-        if followSpectatorEnabled then
-            Gui.sameLine()
-            Gui.textDisabled("(Following)")
-        end
-        Gui.endChild()
+		Gui.beginChild("spectatorCountBox", 140, 70, true)
+		Gui.textDisabled(Icon.Eye .. "  Spectators")
+		Gui.text(tostring(#spectatorList))
+		Gui.endChild()
 
-        Gui.newLine()
+		Gui.sameLine()
 
-        Gui.separatorText(Icon.Users .. "  Players (" .. tostring(#players) .. ")")
-        Gui.indent()
-        playerSearchText = Gui.inputText(Icon.Search .. "  Search Players", playerSearchText)
-        
-        if Gui.beginListBox("##PlayersList") then
+		Gui.beginChild("targetStatusBox", 200, 70, true)
+		Gui.textDisabled(Icon.ChevronRight .. "  Spectator Target")
+		Gui.text(selectedSpectatorName ~= "" and selectedSpectatorName or "None")
+		if followSpectatorEnabled then
+			Gui.sameLine()
+			Gui.textDisabled("(Following)")
+		end
+		Gui.endChild()
+
+		Gui.newLine()
+
+		Gui.separatorText(Icon.Users .. "  Players (" .. tostring(#players) .. ")")
+		Gui.indent()
+		playerSearchText = Gui.inputText(Icon.Search .. "  Search Players", playerSearchText)
+
+		if Gui.beginListBox("##PlayersList") then
 			for i, p in ipairs(players) do
 				Gui.pushId(tostring(i))
-				if playerSearchText == "" or string.find(string.lower(p.name), string.lower(playerSearchText), 1, true) then
-					local isSelected = selectedPlayerTarget ~= nil 
-						and p.id == selectedPlayerTarget.id 
+				if
+					playerSearchText == ""
+					or string.find(string.lower(p.name), string.lower(playerSearchText), 1, true)
+				then
+					local isSelected = selectedPlayerTarget ~= nil
+						and p.id == selectedPlayerTarget.id
 						and p.sessionIndex == selectedPlayerTarget.sessionIndex
 
 					if Gui.selectable(p.name, isSelected) then
@@ -1682,22 +2172,21 @@ function onGui()
 			Gui.endListBox()
 		end
 
+		if selectedPlayerObj then
+			local isFollowingSelectedPlayer = Axis.isEnabled and config.currentPlayerId == selectedPlayerTarget.id
 
-        if selectedPlayerObj then
-			local isFollowingSelectedPlayer = Axis.isEnabled
-				and config.currentPlayerId == selectedPlayerTarget.id
+			if Gui.button(Icon.LocationArrow .. "  Teleport") then
+				local targetPos = (selectedPlayerObj.head and selectedPlayerObj.head.position)
+					or (selectedPlayerObj.root and selectedPlayerObj.root.position)
+					or (selectedPlayerObj.transform and selectedPlayerObj.transform.position)
+				if targetPos then
+					camera.position = targetPos
+				end
+			end
 
-            if Gui.button(Icon.LocationArrow .. "  Teleport") then
-                local targetPos = (selectedPlayerObj.head and selectedPlayerObj.head.position)
-                    or (selectedPlayerObj.root and selectedPlayerObj.root.position)
-                    or (selectedPlayerObj.transform and selectedPlayerObj.transform.position)
-                if targetPos then camera.position = targetPos end
-            end
+			Gui.sameLine()
 
-            Gui.sameLine()
-
-			local followLabel = isFollowingSelectedPlayer
-				and (Icon.Pause .. "  Stop Following")
+			local followLabel = isFollowingSelectedPlayer and (Icon.Pause .. "  Stop Following")
 				or (Icon.Play .. "  Start Following")
 			if Gui.button(followLabel) then
 				if isFollowingSelectedPlayer then
@@ -1706,7 +2195,9 @@ function onGui()
 					config.followBestScraprunPlayer = false
 					config.currentPlayerId = selectedPlayerTarget.id
 				end
-				if saveConfig then saveConfig() end
+				if saveConfig then
+					saveConfig()
+				end
 
 				if not isFollowingSelectedPlayer and not Axis.isEnabled then
 					Axis.isEnabled = true
@@ -1727,11 +2218,14 @@ function onGui()
 		Gui.separatorText(Icon.Eye .. "  Spectators (" .. tostring(#spectatorList) .. ")")
 		Gui.indent()
 		spectatorSearchText = Gui.inputText(Icon.Search .. "  Search Spectators", spectatorSearchText)
-		
+
 		if Gui.beginListBox("##SpectatorsList") then
 			for _, spec in ipairs(spectatorList) do
 				local name = spec.playerName or ("Spectator #" .. spec.playerId)
-				if spectatorSearchText == "" or string.find(string.lower(name), string.lower(spectatorSearchText), 1, true) then
+				if
+					spectatorSearchText == ""
+					or string.find(string.lower(name), string.lower(spectatorSearchText), 1, true)
+				then
 					if Gui.selectable(name, selectedSpectatorName == name) then
 						selectedSpectatorName = name
 					end
@@ -1742,16 +2236,19 @@ function onGui()
 
 		if selectedSpectator then
 			Gui.beginHorizontal("SpecActions")
-				if Gui.button(Icon.LocationArrow .. "  Teleport") then
-					local targetPos = (selectedSpectator.transform and selectedSpectator.transform.position)
-						or (selectedSpectator.root and selectedSpectator.root.position)
-					if targetPos then camera.position = targetPos end
+			if Gui.button(Icon.LocationArrow .. "  Teleport") then
+				local targetPos = (selectedSpectator.transform and selectedSpectator.transform.position)
+					or (selectedSpectator.root and selectedSpectator.root.position)
+				if targetPos then
+					camera.position = targetPos
 				end
-				
-				local followText = followSpectatorEnabled and (Icon.Pause .. " Stop Following") or (Icon.Play .. "  Start Following")
-				if Gui.button(followText) then
-					followSpectatorEnabled = not followSpectatorEnabled
-				end
+			end
+
+			local followText = followSpectatorEnabled and (Icon.Pause .. " Stop Following")
+				or (Icon.Play .. "  Start Following")
+			if Gui.button(followText) then
+				followSpectatorEnabled = not followSpectatorEnabled
+			end
 			Gui.endHorizontal()
 		else
 			Gui.textDisabled("Select a spectator above to interact.")
@@ -1759,7 +2256,7 @@ function onGui()
 		Gui.unindent()
 		Gui.newLine()
 
-    	Gui.endTabItem()
+		Gui.endTabItem()
 	end
 
 	if showReplayTab and Gui.beginTabItem(getTabTitle(Icon.Play, "Replays")) then
@@ -1769,17 +2266,17 @@ function onGui()
 
 	if showModelsTab and Gui.beginTabItem(getTabTitle(Icon.VectorSquare, "Draw")) then
 		Gui.beginTabBar("DrawSubTabs")
-		
+
 		if Gui.beginTabItem(Icon.Shapes .. "  Models") then
 			Models.onModelsGui()
 			Gui.endTabItem()
 		end
-		
+
 		if Gui.beginTabItem(Icon.Image .. "  Images & GIFs") then
 			Models.onImagesGui()
 			Gui.endTabItem()
 		end
-		
+
 		if Gui.beginTabItem(Icon.Font .. "  Text") then
 			Models.onTextGui()
 			Gui.endTabItem()
@@ -1789,7 +2286,7 @@ function onGui()
 			Models.onLightsGui()
 			Gui.endTabItem()
 		end
-		
+
 		Gui.endTabBar()
 		Gui.endTabItem()
 	end
@@ -1806,10 +2303,16 @@ function tick(dt)
 		end
 	end
 
-	if enableShowNameTagsKey and parseKeyStr(showNameTagsKeyStr) and Input.getKeyDown(parseKeyStr(showNameTagsKeyStr)) then
+	if
+		enableShowNameTagsKey
+		and parseKeyStr(showNameTagsKeyStr)
+		and Input.getKeyDown(parseKeyStr(showNameTagsKeyStr))
+	then
 		config.showNameTags = not config.showNameTags
 		camera.showNameTags = config.showNameTags
-		if saveConfig then saveConfig() end
+		if saveConfig then
+			saveConfig()
+		end
 	end
 
 	if Replays and Replays.tick then
@@ -1856,7 +2359,7 @@ function tick(dt)
 		end
 	end
 
-	if enableDisconnectKey then
+	if enableDisconnectKey == true then
 		local keyEnum = parseKeyStr(disconnectKeyStr)
 		if keyEnum and Input.getKeyDown(keyEnum) then
 			Network.disconnectFromServer()
@@ -1911,11 +2414,11 @@ function tick(dt)
 	end
 
 	if emoteCycling and timer - lastEmoteCycleTime > emoteCycleInterval then
-        local currentId = camera:getEmote() or 0
-        local nextId = (currentId + 1) % 11
-        camera:setEmote(nextId)
-        lastEmoteCycleTime = timer
-    end
+		local currentId = camera:getEmote() or 0
+		local nextId = (currentId + 1) % 11
+		camera:setEmote(nextId)
+		lastEmoteCycleTime = timer
+	end
 
 	if Axis.isEnabled then
 		Axis.tick(dt)
@@ -1928,7 +2431,8 @@ function tick(dt)
 	local gravityForward = Util.projectVectorOntoPlane(forward, currentGravityDirection):getSafeNormal()
 	local right = camera.rotation:getRightVector()
 	local up = camera.rotation:getUpVector()
-	local useLocalMovementAxes = Util.xor(Inputs.localMovementAxesDefault, Input.getKey(Inputs.gravityAlignedMovementModifier))
+	local useLocalMovementAxes =
+		Util.xor(Inputs.localMovementAxesDefault, Input.getKey(Inputs.gravityAlignedMovementModifier))
 
 	if Input.getKey(Inputs.fastKey) or Input.getKey(Input.Gamepad.RightShoulder) then
 		moveSpeed *= (1 + Inputs.speedAdjustmentRate * dt)
@@ -1963,31 +2467,31 @@ function tick(dt)
 	if enableEmoteToggleKey then
 		local keyEnum = parseKeyStr(emoteToggleKeyStr)
 		if keyEnum and Input.getKeyDown(keyEnum) then
-		local currentEmote = camera:getEmote()
+			local currentEmote = camera:getEmote()
 			camera:setEmote(currentEmote == emoteToggleId and 0 or emoteToggleId)
 		end
 	end
 
 	if (Input.getKeyDown(Input.Key.Up) or Input.getKeyDown(Inputs.frontflipGp)) and not flipActive then
-        flipActive = true
-        flipDirection = 1
-        flipTimer = 0
+		flipActive = true
+		flipDirection = 1
+		flipTimer = 0
 	elseif (Input.getKeyDown(Input.Key.Down) or Input.getKeyDown(Inputs.backflipGp)) and not flipActive then
-        flipActive = true
-        flipDirection = -1
-        flipTimer = 0
-    end
+		flipActive = true
+		flipDirection = -1
+		flipTimer = 0
+	end
 
-    local currentFlipOffset = 0
-    if flipActive then
-        flipTimer = flipTimer + dt
-        local progress = flipTimer / flipDuration
-        if progress >= 1 then
-            progress = 1
-            flipActive = false
-        end
-        currentFlipOffset = progress * 360 * flipDirection
-    end
+	local currentFlipOffset = 0
+	if flipActive then
+		flipTimer = flipTimer + dt
+		local progress = flipTimer / flipDuration
+		if progress >= 1 then
+			progress = 1
+			flipActive = false
+		end
+		currentFlipOffset = progress * 360 * flipDirection
+	end
 
 	camera.fieldOfView -= Input.getAnalog(Input.Key.MouseWheelAxis) * Inputs.zoomSpeedKb
 	if Input.getKey(Inputs.zoomInGp) then
@@ -2079,8 +2583,13 @@ function tick(dt)
 	if Inputs.alignToGravity then
 		if gravityChaser ~= gravityTarget and (insideGravityRegion or gravity.strength ~= 0) then
 			local inputTotal = nextLookDiff:length()
-			local nextGravityChaser = Quat.slerp(gravityChaser, gravityTarget, (inputTotal * Inputs.gravityChaseSpeed + Inputs.gravitySlowChaseSpeed) * dt)
-			local nextRotation = nextGravityChaser:inverse() * Quat.fromXZ(forward, nextGravityChaser:rotateVector(Vec3.new(0, 0, 1)))
+			local nextGravityChaser = Quat.slerp(
+				gravityChaser,
+				gravityTarget,
+				(inputTotal * Inputs.gravityChaseSpeed + Inputs.gravitySlowChaseSpeed) * dt
+			)
+			local nextRotation = nextGravityChaser:inverse()
+				* Quat.fromXZ(forward, nextGravityChaser:rotateVector(Vec3.new(0, 0, 1)))
 			Inputs.rotEuler = nextRotation:euler() + Vec3.new(Inputs.rotEuler.x, 0, 0)
 			gravityChaser = nextGravityChaser
 		end
@@ -2100,7 +2609,11 @@ function tick(dt)
 		Inputs.rotEuler.y = -89.9
 	end
 
-	if Input.getKeyUp(Inputs.rollMouseEnable) or Input.getKeyUp(Inputs.rollRightGp) or Input.getKeyUp(Inputs.rollLeftGp) then
+	if
+		Input.getKeyUp(Inputs.rollMouseEnable)
+		or Input.getKeyUp(Inputs.rollRightGp)
+		or Input.getKeyUp(Inputs.rollLeftGp)
+	then
 		local clampedRoll = math.abs(Inputs.rotEuler.x) % 360
 		if clampedRoll <= Inputs.rollResetTolerance then
 			Inputs.rotEuler.x = 0
@@ -2119,7 +2632,8 @@ function tick(dt)
 		end
 	end
 	camera.position += movement
-	camera.rotation = gravityChaser * Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y + currentFlipOffset, Inputs.rotEuler.z)
+	camera.rotation = gravityChaser
+		* Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y + currentFlipOffset, Inputs.rotEuler.z)
 	local gameData = getGameData()
 	if gameData and gameData.spectators then
 		spectatorList = gameData.spectators
@@ -2145,9 +2659,6 @@ function tick(dt)
 		camera.rotation = targetRot
 		Inputs.rotEuler = camera.rotation:euler()
 	end
-
-	Models.updateHud(dt)
-
 end
 
 function onMessageReceived(message)
