@@ -31,6 +31,10 @@ __Rework of Pub's DriftVision with new features!__
   - See all Players and Spectators in one place
   - Teleport to any player or spectator
   - Start following anyone first-person
+### Path
+  - Create keyframes, customize them in detail, and play them cinematically!
+  - Easy to use and understand GUI
+  - Built from the ground-up, uses very complicated smoothing math 
 ### Replays
   - Manage several replays at once
   - Load, set times, unload, play, restart easily
@@ -62,4 +66,4 @@ __Visit august-image.vercel.app/ to make GIFs__
 > [!IMPORTANT]
 > This product is not affiliated with Another Axiom Inc. or its videogames Gorilla Tag and Orion Drift and is not endorsed or otherwise sponsored by Another Axiom. Portions of the materials contained herein are property of Another Axiom. ©2021 Another Axiom Inc.
 
-Ping me in the forum thread for questions, feedback, suggestions, and more.
+Ping me in the forum thread for questions, feedback, suggestions, and more!
