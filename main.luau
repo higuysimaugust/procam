@@ -1,9 +1,33 @@
-local Inputs = require("inputs")
-local Util = require("util")
-local Emotes = require("emotes")
-local Models = require("models")
-local Axis = require("axis")
-local Replays = require("replays")
+--!strict
+-- Hey and welcome to procam!
+-- Procam is a massive script combining many many utilities and functionalities, and of course the code is MASSIVE
+-- I'm gonna go through some basics and comment along the way so you can figure out this HELl of a mess sob emoji
+
+-- Here are the paths:
+-- main.luau - main script, contains loop, most of the GUI
+-- /scripts/Cameras/axis.luau - playercam
+-- /scripts/Cameras/path.luau - path/keyframe functionality
+-- /scripts/Cameras/replays.luau - bulk replay thingie tool
+
+-- /scripts/Draw/gltf.luau - taken from modelviewer gltf decoding logic
+-- /scripts/Draw/models.luau - most of the draw tab
+-- /scripts/Draw/media.luau - frame and texture load helper
+-- /scripts/Draw/text.luau - text helper with char widths and color stuff
+
+-- /scripts/More/emotes.luau - emote tab gui helper. one of hte oldest parts of procam so its practically useless and most is in main
+-- /scripts/More/inputs.luau - keybind remapping helper and some of the default controls
+-- /scripts/More/util.luau - misc helper functions, smoothing,mtah, vector stuff, yada yada
+
+
+local Inputs = require("scripts/More/inputs")
+local Util = require("scripts/More/util")
+local Emotes = require("scripts/More/emotes")
+local Models = require("scripts/Draw/models")
+local Axis = require("scripts/Cameras/axis")
+local Replays = require("scripts/Cameras/replays")
+local Path = require("scripts/Cameras/path")
+local parseKeyStr = Inputs.parseKeyStr
+local drawKeybindCombo = Inputs.drawKeybindCombo
 
 config = config or {}
 
@@ -30,6 +54,11 @@ local showReplayTab = config.showReplayTab
 if showReplayTab == nil then
 	showReplayTab = true
 end
+local showPathTab = config.showPathTab
+if showPathTab == nil then
+	showPathTab = true
+end
+local homePageStyle = config.homePageStyle == "Compact" and "Compact" or "Default"
 config.showAxisDebug = config.showAxisDebug ~= nil and config.showAxisDebug or false
 Inputs.enableSpaceKeybind = config.enableSpaceKeybind ~= nil and config.enableSpaceKeybind or false
 if config.alignToGravity == nil then
@@ -78,10 +107,10 @@ end
 local screenshotKeyStr = config.screenshotKeyStr or "F9"
 
 local enableFreecamKey = config.enableFreecamKey ~= nil and config.enableFreecamKey or false
-local freecamKeyStr = config.freecamKeyStr or "LeftBracket"
+local freecamKeyStr = config.freecamKeyStr or "X"
 
-local enableHandcamKey = config.enableHandcamKey ~= nil and config.enableHandcamKey or false
-local handcamKeyStr = config.handcamKeyStr or "RightBracket"
+local enablePlayercamKey = config.enablePlayercamKey ~= nil and config.enablePlayercamKey or false
+local PlayercamKeyStr = config.PlayercamKeyStr or "U"
 
 local enableEmoteToggleKey = config.enableEmoteToggleKey
 if enableEmoteToggleKey == nil then
@@ -108,63 +137,6 @@ local enableDisconnectKey = config.enableDisconnectKey ~= nil and config.enableD
 local disconnectKeyStr = config.disconnectKeyStr or "R"
 local ownerName = config.ownerName or "Playername"
 config.ownerName = ownerName
-
-local function parseKeyStr(keyStr: string)
-	if not keyStr or keyStr == "" then
-		return nil
-	end
-
-	local normalizedKeyStr = tostring(keyStr):gsub("^%s+", ""):gsub("%s+$", "")
-	if normalizedKeyStr == "" then
-		return nil
-	end
-
-	local aliasMap = {
-		MouseLeft = Input.Key.LeftMouseButton,
-		MouseRight = Input.Key.RightMouseButton,
-		MouseMiddle = Input.Key.MiddleMouseButton,
-		MouseSide1 = Input.Key.ThumbMouseButton,
-		MouseSide2 = Input.Key.ThumbMouseButton2,
-		ControllerLeftTrigger = Input.Gamepad.LeftTrigger,
-		ControllerRightTrigger = Input.Gamepad.RightTrigger,
-		ControllerLeftBumper = Input.Gamepad.LeftShoulder,
-		ControllerRightBumper = Input.Gamepad.RightShoulder,
-		ControllerFaceUp = Input.Gamepad.FaceButton_Top,
-		ControllerFaceDown = Input.Gamepad.FaceButton_Bottom,
-		ControllerFaceLeft = Input.Gamepad.FaceButton_Left,
-		ControllerFaceRight = Input.Gamepad.FaceButton_Right,
-		ControllerDPadUp = Input.Gamepad.DPad_Up,
-		ControllerDPadDown = Input.Gamepad.DPad_Down,
-		ControllerDPadLeft = Input.Gamepad.DPad_Left,
-		ControllerDPadRight = Input.Gamepad.DPad_Right,
-		ControllerLeftStickClick = Input.Gamepad.LeftThumbstick,
-		ControllerRightStickClick = Input.Gamepad.RightThumbstick,
-		Space = Input.Key.Space,
-		SpaceBar = Input.Key.Space,
-	}
-
-	if aliasMap[normalizedKeyStr] then
-		return aliasMap[normalizedKeyStr]
-	end
-
-	local normalizedLower = string.lower(normalizedKeyStr)
-	for alias, value in pairs(aliasMap) do
-		if string.lower(alias) == normalizedLower then
-			return value
-		end
-	end
-
-	local keyValue = Input.Key[normalizedKeyStr] or Input.Gamepad[normalizedKeyStr]
-	if keyValue then
-		return keyValue
-	end
-
-	if string.find(normalizedLower, "mouse") then
-		return nil
-	end
-
-	return Input.Key[normalizedKeyStr] or Input.Gamepad[normalizedKeyStr]
-end
 
 local emoteLabels = {
 	[0] = { "None" },
@@ -477,6 +449,7 @@ local aresLocationGroups = {
 }
 
 local function detectMapType()
+	-- thanks to witherr for letting me steal its code on this: basically, how do we detect what map (orion/shuttle/ares) we're on? gamemodes api! no one knwos about it but itsg enuineyl such a cool workarouind
 	if not SpectatorGamemodes or not SpectatorGamemodes.listGamemodeIds then
 		return "Orion"
 	end
@@ -563,8 +536,6 @@ local followSpectatorEnabled = false
 local selectedSpectatorName = ""
 local spectatorSearchText = ""
 local spectatorList = {}
-local matchmakingServerNumber = ""
-local matchmakingStatus = ""
 local debugLocationName = "New Location"
 local showLocationWriter = config.showLocationWriter or false
 
@@ -598,167 +569,6 @@ local ndelay = 0.01
 local nameTagsSyncTimer = 0.1
 local nameTagsSyncPending = true
 
-local availableKeybindCategories = {
-	{
-		name = "Keyboard",
-		keys = {
-			"A",
-			"B",
-			"C",
-			"D",
-			"E",
-			"F",
-			"G",
-			"H",
-			"I",
-			"J",
-			"K",
-			"L",
-			"M",
-			"N",
-			"O",
-			"P",
-			"Q",
-			"R",
-			"S",
-			"T",
-			"U",
-			"V",
-			"W",
-			"X",
-			"Y",
-			"Z",
-			"0",
-			"1",
-			"2",
-			"3",
-			"4",
-			"5",
-			"6",
-			"7",
-			"8",
-			"9",
-			"F1",
-			"F2",
-			"F3",
-			"F4",
-			"F5",
-			"F6",
-			"F7",
-			"F8",
-			"F9",
-			"F10",
-			"F11",
-			"F12",
-			"SpaceBar",
-			"LeftBracket",
-			"RightBracket",
-			"PageUp",
-			"PageDown",
-			"Home",
-			"End",
-			"Insert",
-			"Delete",
-			"Up",
-			"Down",
-			"Left",
-			"Right",
-			"LeftShift",
-			"RightShift",
-			"LeftControl",
-			"RightControl",
-			"LeftAlt",
-			"RightAlt",
-			"Tab",
-			"Enter",
-			"Escape",
-			"Backspace",
-			"Tilde",
-		},
-	},
-	{
-		name = "Mouse",
-		keys = {
-			"MouseLeft",
-			"MouseRight",
-			"MouseMiddle",
-			"MouseSide1",
-			"MouseSide2",
-		},
-	},
-	{
-		name = "Controller",
-		keys = {
-			"ControllerLeftTrigger",
-			"ControllerRightTrigger",
-			"ControllerLeftBumper",
-			"ControllerRightBumper",
-			"ControllerFaceUp",
-			"ControllerFaceDown",
-			"ControllerFaceLeft",
-			"ControllerFaceRight",
-			"ControllerDPadUp",
-			"ControllerDPadDown",
-			"ControllerDPadLeft",
-			"ControllerDPadRight",
-			"ControllerLeftStickClick",
-			"ControllerRightStickClick",
-		},
-	},
-}
-
-local keybindSearchStates = {}
-local keybindFilterStates = {}
-
-local function drawKeybindCombo(comboId, currentVal)
-	if Gui.beginCombo(comboId, currentVal == "" and "None" or currentVal) then
-		keybindSearchStates[comboId] = keybindSearchStates[comboId] or ""
-		keybindFilterStates[comboId] = keybindFilterStates[comboId] or "All"
-
-		Gui.setNextItemWidth(250)
-		keybindSearchStates[comboId] = Gui.inputText(Icon.Search .. comboId, keybindSearchStates[comboId])
-
-		Gui.beginTabBar("Filters##" .. comboId)
-		if Gui.beginTabItem("All") then
-			keybindFilterStates[comboId] = "All"
-			Gui.endTabItem()
-		end
-		if Gui.beginTabItem("Keyboard") then
-			keybindFilterStates[comboId] = "Keyboard"
-			Gui.endTabItem()
-		end
-		if Gui.beginTabItem("Mouse") then
-			keybindFilterStates[comboId] = "Mouse"
-			Gui.endTabItem()
-		end
-		if Gui.beginTabItem("Controller") then
-			keybindFilterStates[comboId] = "Controller"
-			Gui.endTabItem()
-		end
-		Gui.endTabBar()
-
-		local filter = keybindFilterStates[comboId]
-		local search = string.lower(keybindSearchStates[comboId])
-
-		if Gui.beginChild("##KeysList_" .. comboId, 250, 150, true) then
-			for _, category in ipairs(availableKeybindCategories) do
-				if filter == "All" or filter == category.name then
-					for _, key in ipairs(category.keys) do
-						if search == "" or string.find(string.lower(key), search, 1, true) then
-							if Gui.selectable(key, currentVal == key) then
-								currentVal = key
-							end
-						end
-					end
-				end
-			end
-			Gui.endChild()
-		end
-		Gui.endCombo()
-	end
-	return currentVal
-end
-
 local function isInsideGravityRegion(position: Vec3): boolean
 	local localPosition = gravityRegionRotation:inverse():rotateVector(position - gravityRegionPosition)
 	return math.abs(localPosition.x) <= gravityRegionHalfScale.x
@@ -767,6 +577,7 @@ local function isInsideGravityRegion(position: Vec3): boolean
 end
 
 local function getRaycastGravityRotation(): Quat?
+	-- only in zero g instead of using the gravity functionality which doesnt work in zero g (there arent gravity volumes added there) it just raycasts to nearest object. sometimes broken but oh well closest thing to world peace
 	local currentUp = gravityChaser:getUpVector()
 	if currentUp:length() <= 0 then
 		currentUp = Vec3.upVector
@@ -981,7 +792,7 @@ end
 
 local function snapToGravity()
 	local mapType = detectMapType()
-	if mapType == "Orion" and isInsideGravityRegion(camera.position) then
+	if mapType == "Orion" and isInsideGravityRegion(camera.position) then -- no zero g logic in ares ofc...
 		gravityTarget = getRaycastGravityRotation() or gravity.upRotation
 	else
 		gravityTarget = gravity.upRotation
@@ -1051,47 +862,58 @@ do
 end
 
 function onGui()
-	local activeCam = "Freecam"
-	if Axis.isEnabled then
-		activeCam = "Handcam"
+	local activeCam = "Procam"
+	if Path.isPlaybackActive() then
+		activeCam = "Path"
+	elseif Axis.isEnabled then
+		activeCam = "Playercam"
 	end
 	if followSpectatorEnabled then
-		activeCam = "Spectator Follow"
+		activeCam = "Spec Follow"
 	end
 
-	Gui.text("Using " .. activeCam)
-
-	local serverPlayerCount = 0
-	local serverSessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
-	for _, session in ipairs(serverSessions) do
-		if session and session.players then
-			for _, playerInfo in ipairs(session.players) do
-				if playerInfo and playerInfo.playerId then
-					local player = session.getPlayerById and session:getPlayerById(playerInfo.playerId) or playerInfo
-					if player and player.playerName then
-						serverPlayerCount += 1
-					end
-				end
-			end
-		end
-	end
+	local serverPlayerCount = #Util.getPlayers()
 	local serverGameData = getGameData and getGameData()
 	local serverSpectatorCount = serverGameData and serverGameData.spectators and #serverGameData.spectators or 0
-	local spectatorLabel = serverSpectatorCount == 1 and "Spectator" or "Spectators"
+	local currentEmoteId = camera:getEmote() or 0
+	local currentEmoteLabels = emoteLabels[currentEmoteId] or { "None" }
+	local currentEmoteLabel = currentEmoteLabels[currentEmoteFrame] or currentEmoteLabels[1]
+
+	Gui.beginChild("GuiStatusCamera", 125, 42, true)
+	Gui.text(Icon.Camera)
 	Gui.sameLine()
-	Gui.textDisabled(
-		serverName
-			.. "   |   "
-			.. Icon.Users
-			.. "  "
-			.. tostring(serverPlayerCount)
-			.. " Players   |   "
-			.. Icon.Eye
-			.. "  "
-			.. tostring(serverSpectatorCount)
-			.. " "
-			.. spectatorLabel
-	)
+	Gui.textDisabled(activeCam)
+	Gui.endChild()
+
+	Gui.sameLine()
+
+	Gui.beginChild("GuiStatusEmote", 90, 42, true)
+	Gui.text(Icon.Smile)
+	Gui.sameLine()
+	Gui.textDisabled(currentEmoteLabel)
+	Gui.endChild()
+
+	Gui.sameLine()
+
+	Gui.beginChild("GuiStatusServer", 180, 42, true)
+	Gui.text(Icon.Server)
+	Gui.sameLine()
+	Gui.textDisabled(serverName)
+	Gui.endChild()
+
+	if serverName ~= "Offline" then
+		Gui.sameLine()
+
+		Gui.beginChild("GuiStatusStats", 130, 42, true)
+		Gui.text(Icon.Users)
+		Gui.sameLine()
+		Gui.textDisabled(tostring(serverPlayerCount))
+		Gui.sameLine()
+		Gui.text(Icon.Eye)
+		Gui.sameLine()
+		Gui.textDisabled(tostring(serverSpectatorCount))
+		Gui.endChild()
+	end
 
 	Gui.beginTabBar("FreecamTabs")
 
@@ -1123,17 +945,67 @@ function onGui()
 			Gui.textDisabled(zeroGHint)
 		end
 		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
-		local newLocalMovementAxes = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
-		if newLocalMovementAxes ~= Inputs.localMovementAxesDefault then
-			Inputs.localMovementAxesDefault = newLocalMovementAxes
-			config.localMovementAxesDefault = newLocalMovementAxes
+		if homePageStyle == "Default" then
+			local newLocalMovementAxes = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
+			if newLocalMovementAxes ~= Inputs.localMovementAxesDefault then
+				Inputs.localMovementAxesDefault = newLocalMovementAxes
+				config.localMovementAxesDefault = newLocalMovementAxes
+				if saveConfig then
+					saveConfig()
+				end
+			end
+			Gui.setItemTooltip("Use Alt to switch between gravity and local movement axes")
+		end
+
+		Gui.separatorText("Emotes")
+
+		Emotes.onGui()
+
+		local currentEmoteId = camera:getEmote() or 0
+
+		Gui.beginChild("homeCurrentEmote", 180, 70, true)
+		Gui.text("Current Emote")
+
+		local labels = emoteLabels[currentEmoteId] or { "None" }
+		Gui.text(labels[currentEmoteFrame] or labels[1])
+
+		Gui.endChild()
+		Gui.sameLine()
+
+		Gui.beginChild("homeEmoteCycling", 180, 70, true)
+		Gui.text("Emote Cycling")
+		if emoteCycling then
+			local remaining = math.max(0, emoteCycleInterval - (timer - lastEmoteCycleTime))
+			Gui.text(Icon.Sync .. "  " .. string.format("%.1f", remaining))
+		else
+			Gui.text("Disabled")
+		end
+		Gui.endChild()
+
+		local newEmoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
+		if newEmoteCycling ~= emoteCycling then
+			emoteCycling = newEmoteCycling
+			config.emoteCycling = emoteCycling
 			if saveConfig then
 				saveConfig()
 			end
 		end
-		Gui.setItemTooltip("Use Alt to switch between gravity and local movement axes")
+		Gui.setItemTooltip("Enable cycling through emotes")
 
-		Gui.separatorText("Movement")
+		if emoteCycling then
+			Gui.sameLine()
+			local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
+			if newEmoteCycleInterval ~= emoteCycleInterval then
+				emoteCycleInterval = newEmoteCycleInterval
+				config.emoteCycleInterval = emoteCycleInterval
+				if saveConfig then
+					saveConfig()
+				end
+			end
+		end
+
+		if homePageStyle == "Default" then
+			Gui.separatorText("Movement")
 
 		local newMoveSpeed = Gui.sliderFloat("Move Speed", moveSpeed, Inputs.minMoveSpeed, Inputs.maxMoveSpeed)
 		if newMoveSpeed ~= moveSpeed then
@@ -1184,7 +1056,7 @@ function onGui()
 			end
 		end
 
-		Gui.separatorText("Camera Controls")
+			Gui.separatorText("Camera Controls")
 
 		camera.position = Gui.dragFloat3("Position", camera.position, 10, -100000, 100000)
 		local newRot = Gui.dragFloat3("Rotation", Inputs.rotEuler, 1, -180, 180)
@@ -1195,58 +1067,18 @@ function onGui()
 			Inputs.rotEuler = newRot
 			camera.rotation = Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y, Inputs.rotEuler.z)
 		end
-		camera.fieldOfView = Gui.sliderFloat("Field of View", camera.fieldOfView, Inputs.minFov, Inputs.maxFov)
+			camera.fieldOfView = Gui.sliderFloat("Field of View", camera.fieldOfView, Inputs.minFov, Inputs.maxFov)
+		end
 
 		Gui.newLine()
 
-		if Gui.collapsingHeader("Emotes") then
-			Emotes.onGui()
-
-			local currentEmoteId = camera:getEmote() or 0
-
-			Gui.beginChild("homeCurrentEmote", 180, 70, true)
-			Gui.text("Current Emote")
-
-			local labels = emoteLabels[currentEmoteId] or { "None" }
-			Gui.text(labels[currentEmoteFrame] or labels[1])
-
-			Gui.endChild()
-			Gui.sameLine()
-
-			Gui.beginChild("homeEmoteCycling", 180, 70, true)
-			Gui.text("Emote Cycling")
-			if emoteCycling then
-				local remaining = math.max(0, emoteCycleInterval - (timer - lastEmoteCycleTime))
-				Gui.text(Icon.Sync .. "  " .. string.format("%.1f", remaining))
-			else
-				Gui.text("Disabled")
-			end
-			Gui.endChild()
-
-			local newEmoteCycling = Gui.checkbox("Cycle Emotes", emoteCycling)
-			if newEmoteCycling ~= emoteCycling then
-				emoteCycling = newEmoteCycling
-				config.emoteCycling = emoteCycling
-				if saveConfig then
-					saveConfig()
-				end
-			end
-			Gui.setItemTooltip("Enable cycling through emotes")
-
-			if emoteCycling then
-				Gui.sameLine()
-				local newEmoteCycleInterval = Gui.sliderFloat("Cycle Rate (s)", emoteCycleInterval, 0.1, 5.0)
-				if newEmoteCycleInterval ~= emoteCycleInterval then
-					emoteCycleInterval = newEmoteCycleInterval
-					config.emoteCycleInterval = emoteCycleInterval
-					if saveConfig then
-						saveConfig()
-					end
-				end
-			end
+		local screenshotsOpen = homePageStyle == "Compact"
+		if screenshotsOpen then
+			Gui.separatorText("Screenshots")
+		else
+			screenshotsOpen = Gui.collapsingHeader("Screenshots")
 		end
-
-		if Gui.collapsingHeader("Screenshots") then
+		if screenshotsOpen then
 			local presetMap = {
 				["1K"] = {
 					["16:9"] = { 1920, 1080 },
@@ -1356,7 +1188,14 @@ function onGui()
 			end
 		end
 
-		if Gui.collapsingHeader("Locations") then
+		local locationsOpen = homePageStyle == "Compact"
+		if locationsOpen then
+			Gui.newLine()
+			Gui.separatorText("Locations")
+		else
+			locationsOpen = Gui.collapsingHeader("Locations")
+		end
+		if locationsOpen then
 			local currentMapType = detectMapType()
 
 			if Gui.beginCombo("##SpawnLocationCombo", defaultSpawnName) then
@@ -1525,7 +1364,7 @@ function onGui()
 		Gui.endTabItem()
 	end
 
-	if Gui.beginTabItem(getTabTitle(Icon.Video or Icon.Camera or "", "Handcam")) then
+	if Gui.beginTabItem(getTabTitle(Icon.Video or Icon.Camera or "", "Playercam")) then
 		Axis.onGui()
 		Gui.endTabItem()
 	end
@@ -1558,7 +1397,7 @@ function onGui()
 				addRow("Frontflip", "Arrow Up", "Y / Face Up")
 				addRow("Backflip", "Arrow Down", "A / Face Down")
 				addRow("Toggle Smoothing", "Caps Lock", "B / Face Right")
-				addRow("Toggle Freecam/Handcam", "--", "X / Face Left")
+				addRow("Toggle Freecam/Playercam", "--", "X / Face Left")
 				addRow("Zoom", "Scrollwheel", "D-Pad Up and Down")
 
 				Gui.endTable()
@@ -1708,30 +1547,30 @@ function onGui()
 			Gui.textDisabled("Invalid key")
 		end
 
-		enableHandcamKey = Gui.checkbox(Icon.User .. "  Handcam##EnableHand", enableHandcamKey)
-		if enableHandcamKey ~= config.enableHandcamKey then
-			config.enableHandcamKey = enableHandcamKey
+		enablePlayercamKey = Gui.checkbox(Icon.User .. "  Playercam##EnableHand", enablePlayercamKey)
+		if enablePlayercamKey ~= config.enablePlayercamKey then
+			config.enablePlayercamKey = enablePlayercamKey
 			if saveConfig then
 				saveConfig()
 			end
 		end
 		Gui.sameLine()
-		if not enableHandcamKey then
+		if not enablePlayercamKey then
 			Gui.beginDisabled()
 		end
 		Gui.setNextItemWidth(200)
-		local newHandcamKey = drawKeybindCombo("##HandKeyInput", handcamKeyStr)
-		if newHandcamKey ~= handcamKeyStr then
-			handcamKeyStr = newHandcamKey
-			config.handcamKeyStr = handcamKeyStr
+		local newPlayercamKey = drawKeybindCombo("##HandKeyInput", PlayercamKeyStr)
+		if newPlayercamKey ~= PlayercamKeyStr then
+			PlayercamKeyStr = newPlayercamKey
+			config.PlayercamKeyStr = PlayercamKeyStr
 			if saveConfig then
 				saveConfig()
 			end
 		end
-		if not enableHandcamKey then
+		if not enablePlayercamKey then
 			Gui.endDisabled()
 		end
-		if parseKeyStr(handcamKeyStr) == nil then
+		if parseKeyStr(PlayercamKeyStr) == nil then
 			Gui.sameLine()
 			Gui.textDisabled("Invalid key")
 		end
@@ -1845,6 +1684,34 @@ function onGui()
 			end
 		end
 
+		local newShowPathTab = Gui.checkbox("Show Path tab", showPathTab)
+		if newShowPathTab ~= showPathTab then
+			showPathTab = newShowPathTab
+			config.showPathTab = showPathTab
+			if saveConfig then
+				saveConfig()
+			end
+		end
+
+		local homePageStyleLabel = homePageStyle == "Compact" and "Compact" or "Default"
+		if Gui.beginCombo("Home Page Style", homePageStyleLabel) then
+			if Gui.selectable("Default", homePageStyle == "Default") then
+				homePageStyle = "Default"
+				config.homePageStyle = homePageStyle
+				if saveConfig then
+					saveConfig()
+				end
+			end
+			if Gui.selectable("Compact", homePageStyle == "Compact") then
+				homePageStyle = "Compact"
+				config.homePageStyle = homePageStyle
+				if saveConfig then
+					saveConfig()
+				end
+			end
+			Gui.endCombo()
+		end
+
 		local tabTitleModeLabel = "Icon + name"
 		if tabTitleMode == "name" then
 			tabTitleModeLabel = "Name"
@@ -1852,7 +1719,7 @@ function onGui()
 			tabTitleModeLabel = "Icon"
 		end
 
-		if Gui.beginCombo("Tab Item Style", tabTitleModeLabel) then
+		if Gui.beginCombo("Tab Style", tabTitleModeLabel) then
 			if Gui.selectable("Icon + name", tabTitleMode == "icon+name") then
 				tabTitleMode = "icon+name"
 				config.tabTitleMode = tabTitleMode
@@ -1880,7 +1747,7 @@ function onGui()
 		Gui.newLine()
 
 		Gui.separatorText("Owner")
-		Gui.textDisabled("Set yourself as the owner to appear first in player lists and handcam!")
+		Gui.textDisabled("Set yourself as the owner to appear first in player lists and Playercam!")
 
 		local newOwnerName = Gui.inputText("Owner", ownerName)
 		if newOwnerName ~= ownerName then
@@ -2024,7 +1891,7 @@ function onGui()
 				saveConfig()
 			end
 		end
-		local newShowAxisDebug = Gui.checkbox("Show Handcam debug tab", config.showAxisDebug)
+		local newShowAxisDebug = Gui.checkbox("Show Playercam debug tab", config.showAxisDebug)
 		if newShowAxisDebug ~= config.showAxisDebug then
 			config.showAxisDebug = newShowAxisDebug
 			if saveConfig then
@@ -2055,22 +1922,6 @@ function onGui()
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Users, "Players")) then
-		if Gui.collapsingHeader("Join Matchmaking Server") then
-			Gui.setNextItemWidth(100)
-			matchmakingServerNumber = Gui.inputText("Server number", matchmakingServerNumber)
-			Gui.sameLine()
-			if Gui.button("Join") then
-				local serverNumber = matchmakingServerNumber:gsub("^%s+", ""):gsub("%s+$", "")
-				local stationName = serverNumber == "" and "Matchmaking" or "Matchmaking_" .. serverNumber
-				local connected = Network.connectToServer(stationName)
-				matchmakingStatus = connected and ("Joining " .. stationName) or ("Failed to join " .. stationName)
-			end
-			if matchmakingStatus ~= "" then
-				Gui.sameLine()
-				Gui.textDisabled(matchmakingStatus)
-			end
-		end
-
 		local players = {}
 		local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
 
@@ -2259,6 +2110,11 @@ function onGui()
 		Gui.endTabItem()
 	end
 
+	if showPathTab and Gui.beginTabItem(getTabTitle(Icon.Route or Icon.MapPin or "", "Path")) then
+		Path.onGui(not Axis.isEnabled)
+		Gui.endTabItem()
+	end
+
 	if showReplayTab and Gui.beginTabItem(getTabTitle(Icon.Play, "Replays")) then
 		Replays.onGui()
 		Gui.endTabItem()
@@ -2295,6 +2151,20 @@ function onGui()
 end
 
 function tick(dt)
+	Path.tick(dt)
+	if Path.isPlaybackActive() then
+		-- path has priority boii
+		return
+	end
+
+	if Path.consumeCameraOverride() then
+		local pathRotation = Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y, Inputs.rotEuler.z)
+		gravityChaser = camera.rotation * pathRotation:inverse()
+		gravityTarget = gravityChaser
+		Inputs.lookInputTarget = Vec3.zeroVector
+		return
+	end
+
 	if nameTagsSyncPending then
 		nameTagsSyncTimer -= dt
 		if nameTagsSyncTimer <= 0 then
@@ -2377,8 +2247,8 @@ function tick(dt)
 		end
 	end
 
-	if enableHandcamKey then
-		local keyEnum = parseKeyStr(handcamKeyStr)
+	if enablePlayercamKey then
+		local keyEnum = parseKeyStr(PlayercamKeyStr)
 		if keyEnum and Input.getKeyDown(keyEnum) then
 			if not Axis.isEnabled then
 				Axis.isEnabled = true
@@ -2422,7 +2292,6 @@ function tick(dt)
 
 	if Axis.isEnabled then
 		Axis.tick(dt)
-		Models.updateHud(dt)
 		return
 	end
 
