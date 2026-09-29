@@ -183,47 +183,48 @@ type CameraTransform = {
 }
 local startLocations: { [string]: { [string]: CameraTransform } } = {
 	Orion = {
+		-- Oh yeah 99 things now start with either Driftball or Club, so they fit better and work properly. I could've done this with ## but it also makes better organization and for GUIs sake yk
 		["Driftball District"] = {
 			position = Vec3.new(0, -3000, -27000),
 			rotation = Quat.fromEuler(0, 0, 90),
 			fieldOfView = 90,
 		},
-		["Sparks Supplies"] = {
+		["Driftball Sparks Supplies"] = {
 			position = Vec3.new(-3616.6, 2623.2, -28411.3),
 			rotation = Quat.fromEuler(0.0, -0.8, 179.7),
 			fieldOfView = 90.0,
 		},
-		["Mainframe"] = {
+		["Driftball Mainframe"] = {
 			position = Vec3.new(-786.7, 2476.6, -29148.3),
 			rotation = Quat.fromEuler(0.0, -2.1, 31.3),
 			fieldOfView = 80.0,
 		},
-		["Plaza West"] = {
+		["Driftball Plaza West"] = {
 			position = Vec3.new(2752.6, 18540.0, -29478.3),
 			rotation = Quat.fromEuler(-0.0, -2.0, -0.7),
 			fieldOfView = 80.0,
 		},
-		["Plaza East"] = {
+		["Driftball Plaza East"] = {
 			position = Vec3.new(-2629.0, 18576.3, -29338.3),
 			rotation = Quat.fromEuler(-0.0, -2.5, -179.5),
 			fieldOfView = 80.0,
 		},
-		["Prime"] = {
+		["Driftball Prime"] = {
 			position = Vec3.new(5.7, 25270.0, -27899.1),
 			rotation = Quat.fromEuler(0.0, -0.9, 90.4),
 			fieldOfView = 80.0,
 		},
-		["4v4 West"] = {
+		["Driftball 4v4 West"] = {
 			position = Vec3.new(-14160.8, 27898.6, -23246.5),
 			rotation = Quat.fromEuler(28.5, -4.9, -89.6),
 			fieldOfView = 90.0,
 		},
-		["4v4 East"] = {
+		["Driftball 4v4 East"] = {
 			position = Vec3.new(13688.8, 28096.6, -23525.5),
 			rotation = Quat.fromEuler(-30.1, -4.9, -89.6),
 			fieldOfView = 90.0,
 		},
-		["Fieldhouse"] = {
+		["Driftball Fieldhouse"] = {
 			position = Vec3.new(46.5, 22785.3, -29127.5),
 			rotation = Quat.fromEuler(0.0, -5.6, 91.1),
 			fieldOfView = 90.0,
@@ -233,17 +234,17 @@ local startLocations: { [string]: { [string]: CameraTransform } } = {
 			rotation = Quat.fromEuler(0, 0, 90),
 			fieldOfView = 90,
 		},
-		["Sparks Supplies"] = {
+		["Club Sparks Supplies"] = {
 			position = Vec3.new(22868.9, 6266.6, 17292.1),
 			rotation = Quat.fromEuler(179.3, 60.1, 179.2),
 			fieldOfView = 90.0,
 		},
-		["Mainframe"] = {
+		["Club Mainframe"] = {
 			position = Vec3.new(25653.1, 2461.7, 13850.4),
 			rotation = Quat.fromEuler(137.6, 49.9, 129.0),
 			fieldOfView = 75.0,
 		},
-		["Volleyfall"] = {
+		["Club Volleyfall"] = {
 			position = Vec3.new(22496.1, 12093.4, 18064.3),
 			rotation = Quat.fromEuler(129.4, -37.8, 63.2),
 			fieldOfView = 75.0,
@@ -253,17 +254,17 @@ local startLocations: { [string]: { [string]: CameraTransform } } = {
 			rotation = Quat.fromEuler(-120.3, 0.5, -89.4),
 			fieldOfView = 90.0,
 		},
-		["Alpha"] = {
+		["Z-Drift Alpha"] = {
 			position = Vec3.new(8734.7, -5412.5, -2669.4),
 			rotation = Quat.fromEuler(-60.2, 0.7, -90.5),
 			fieldOfView = 90.0,
 		},
-		["Beta"] = {
+		["Z-Drift Beta"] = {
 			position = Vec3.new(7571.8, -5406.4, 4377.9),
 			rotation = Quat.fromEuler(-120.3, -0.6, -90.2),
 			fieldOfView = 90.0,
 		},
-		["Gamma"] = {
+		["Z-Drift Gamma"] = {
 			position = Vec3.new(2049.0, -5450.9, 8889.3),
 			rotation = Quat.fromEuler(179.7, -1.6, -90.4),
 			fieldOfView = 90.0,
@@ -273,7 +274,7 @@ local startLocations: { [string]: { [string]: CameraTransform } } = {
 			rotation = Quat.fromEuler(0.5, -2.5, -90.2),
 			fieldOfView = 90.0,
 		},
-		["Z-Draft"] = {
+		["Z-Drift DRAFT District"] = {
 			position = Vec3.new(-6797.9, 8024.8, 4058.9),
 			rotation = Quat.fromEuler(120.0, -2.0, -89.5),
 			fieldOfView = 90.0,
@@ -308,7 +309,7 @@ local startLocations: { [string]: { [string]: CameraTransform } } = {
 			rotation = Quat.fromEuler(90.0, -0.4, 85.5),
 			fieldOfView = 90.0,
 		},
-		["Baseball"] = {
+		["Club Baseball"] = {
 			position = Vec3.new(13899.7, 1254.5, 24347.8),
 			rotation = Quat.fromEuler(149.9, -0.4, 85.5),
 			fieldOfView = 90.0,
@@ -390,13 +391,13 @@ local orionLocationGroups = {
 		title = "Driftball District",
 		labels = {
 			"Driftball District",
-			"Sparks Supplies",
-			"Mainframe",
-			"Plaza West",
-			"Plaza East",
-			"Prime",
-			"4v4 West",
-			"4v4 East",
+			"Driftball Sparks Supplies",
+			"Driftball Mainframe",
+			"Driftball Plaza West",
+			"Driftball Plaza East",
+			"Driftball Prime",
+			"Driftball 4v4 West",
+			"Driftball 4v4 East",
 		},
 	},
 
@@ -415,17 +416,17 @@ local orionLocationGroups2 = {
 		title = "Club District",
 		labels = {
 			"Club District",
-			"Sparks Supplies",
-			"Mainframe",
-			"Volleyfall",
-			"Fieldhouse",
-			"Baseball",
-			"Driftblitz",
+			"Club Sparks Supplies",
+			"Club Mainframe",
+			"Club Volleyfall",
+			"Club Fieldhouse",
+			"Club Baseball",
+			"Club Driftblitz",
 		},
 	},
 	{
 		title = "Z-Drift",
-		labels = { "Z-Drift Plaza", "Cargo Bay", "Alpha", "Beta", "Gamma", "Z-Draft" },
+		labels = { "Z-Drift Plaza", "Cargo Bay", "Z-Drift Alpha", "Z-Drift Beta", "Z-Drift Gamma", "Z-Drift DRAFT District" },
 	},
 }
 
@@ -528,6 +529,7 @@ if not startLocation then
 end
 
 local pendingGravitySnap = false
+local pendingGravitySnapRotation: Quat? = nil
 
 local defaultSpawnSearchText = ""
 local playerSearchText = ""
@@ -538,6 +540,9 @@ local spectatorSearchText = ""
 local spectatorList = {}
 local debugLocationName = "New Location"
 local showLocationWriter = config.showLocationWriter or false
+local autoFocusKeybindEnabled = config.autoFocusKeybindEnabled == true
+Inputs.autoFocusKeyKB = autoFocusKeybindEnabled and Input.Key.MiddleMouseButton or nil
+Inputs.autoFocusKeyGP = autoFocusKeybindEnabled and Input.Gamepad.RightThumbstick or nil
 
 local emoteCycling = config.emoteCycling ~= nil and config.emoteCycling or false
 local lastEmoteCycleTime = 0
@@ -561,12 +566,23 @@ local zDriftBallColor = savedZDriftBallColor
 
 local flipActive = false
 local flipDirection = 1
+local flipAxis = "pitch"
 local flipTimer = 0
 local flipDuration = 0.5
+if config.barrelRollEnabled == nil then
+	config.barrelRollEnabled = true
+end
+local barrelRollEnabled = config.barrelRollEnabled
 
-local ntimer = 0
-local ndelay = 0.01
+local gravitySnapTimer = 0
+
+-- these are for instantly doing a thing upon another thing. for somer eason i couldnt do it instantly, i need to do it 0.1s later or whaterver. shrug
+
+local gravitySnapDelay = 0.1
+local defaultSpawnGravitySnapDelay = 0.5
+local pendingGravitySnapDelay = gravitySnapDelay
 local nameTagsSyncTimer = 0.1
+
 local nameTagsSyncPending = true
 
 local function isInsideGravityRegion(position: Vec3): boolean
@@ -790,7 +806,11 @@ local function drawZDriftBallOutline()
 	end
 end
 
-local function snapToGravity()
+local function snapToGravity(rotation: Quat?)
+	if rotation then
+		camera.rotation = rotation
+	end
+
 	local mapType = detectMapType()
 	if mapType == "Orion" and isInsideGravityRegion(camera.position) then -- no zero g logic in ares ofc...
 		gravityTarget = getRaycastGravityRotation() or gravity.upRotation
@@ -798,18 +818,22 @@ local function snapToGravity()
 		gravityTarget = gravity.upRotation
 	end
 	gravityChaser = gravityTarget
+	local forward = camera.rotation:getForwardVector()
+	local gravityUp = gravityChaser:rotateVector(Vec3.new(0, 0, 1))
+	Inputs.rotEuler = (gravityChaser:inverse() * Quat.fromXZ(forward, gravityUp)):euler()
 	Inputs.rotEuler.x = 0
 end
 
-local function goToLocation(transform: CameraTransform)
+local function goToLocation(transform: CameraTransform, snapDelay: number?)
 	Inputs.rotEuler = transform.rotation:euler()
 	Inputs.rotEuler.x = 0
 	camera.position = transform.position
 	camera.rotation = transform.rotation
 	camera.fieldOfView = transform.fieldOfView
-	snapToGravity()
 	pendingGravitySnap = true
-	ntimer = 0
+	pendingGravitySnapRotation = transform.rotation
+	gravitySnapTimer = 0
+	pendingGravitySnapDelay = snapDelay or gravitySnapDelay
 end
 
 local function formatLocationLine(locationName: string, pos: Vec3, rot: Quat, fov: number): string
@@ -839,7 +863,7 @@ end
 function onTransitionBegin(transitionInfo: Transition)
 	if Inputs.firstTransition then
 		transitionInfo.length = 10
-		goToLocation(startLocation)
+		goToLocation(startLocation, defaultSpawnGravitySnapDelay)
 	else
 		goToLocation({
 			position = transitionInfo.startPosition,
@@ -1370,6 +1394,7 @@ function onGui()
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Cog, "Settings")) then
+		Gui.textDisabled("Hover over each setting for descriptions!")
 		if Gui.collapsingHeader("Controls") then
 			if Gui.beginTable("ControlsTable", 3) then
 				Gui.tableSetupColumn("Action", 0, 0.4)
@@ -1414,6 +1439,7 @@ function onGui()
 				saveConfig()
 			end
 		end
+		Gui.setItemTooltip("Toggles player name tags")
 		Gui.sameLine()
 		if not enableShowNameTagsKey then
 			Gui.beginDisabled()
@@ -1434,7 +1460,7 @@ function onGui()
 			Gui.sameLine()
 			Gui.textDisabled("Invalid key")
 		end
-
+	
 		enableAlignToGravityKey = Gui.checkbox(Icon.ArrowDown .. "  Align to gravity", enableAlignToGravityKey)
 		if enableAlignToGravityKey ~= config.enableAlignToGravityKey then
 			config.enableAlignToGravityKey = enableAlignToGravityKey
@@ -1442,6 +1468,7 @@ function onGui()
 				saveConfig()
 			end
 		end
+		Gui.setItemTooltip("Aligns the camera to gravity using a keybind. Disable it to use Spacebar for Path/Replay/etc.")
 		Gui.sameLine()
 		if not enableAlignToGravityKey then
 			Gui.beginDisabled()
@@ -1470,6 +1497,7 @@ function onGui()
 				saveConfig()
 			end
 		end
+		Gui.setItemTooltip("Takes a screenshot, check Home Tab for Settings")
 		Gui.sameLine()
 		if not enableScreenshotKey then
 			Gui.beginDisabled()
@@ -1492,6 +1520,7 @@ function onGui()
 		end
 
 		enableDisconnectKey = Gui.checkbox(Icon.SignOutAlt .. "  Disconnect", enableDisconnectKey)
+		Gui.setItemTooltip("Quits to Main Menu")
 		Gui.sameLine()
 		if not enableDisconnectKey then
 			Gui.beginDisabled()
@@ -1526,6 +1555,7 @@ function onGui()
 				saveConfig()
 			end
 		end
+		Gui.setItemTooltip("Sets camera to Freecam")
 		Gui.sameLine()
 		if not enableFreecamKey then
 			Gui.beginDisabled()
@@ -1548,6 +1578,7 @@ function onGui()
 		end
 
 		enablePlayercamKey = Gui.checkbox(Icon.User .. "  Playercam##EnableHand", enablePlayercamKey)
+		Gui.setItemTooltip("Sets camera to Playercam")
 		if enablePlayercamKey ~= config.enablePlayercamKey then
 			config.enablePlayercamKey = enablePlayercamKey
 			if saveConfig then
@@ -1576,6 +1607,7 @@ function onGui()
 		end
 
 		enableEmoteToggleKey = Gui.checkbox(Icon.Smile .. "  Toggle emote##EnableEmoteToggle", enableEmoteToggleKey)
+		Gui.setItemTooltip("Use a keybind to toggle from Default emote to a selected emote. Fun for quick emoting")
 		Gui.sameLine()
 		if not enableEmoteToggleKey then
 			Gui.beginDisabled()
@@ -1620,8 +1652,8 @@ function onGui()
 			Gui.endDisabled()
 		end
 
-		enableTeleportKey =
-			Gui.checkbox(Icon.LocationArrow .. "  Teleport to location##EnableTeleport", enableTeleportKey)
+		enableTeleportKey = Gui.checkbox(Icon.LocationArrow .. "  Teleport to location##EnableTeleport", enableTeleportKey)
+		Gui.setItemTooltip("Teleport to a set location")
 		Gui.sameLine()
 		if not enableTeleportKey then
 			Gui.beginDisabled()
@@ -1712,6 +1744,8 @@ function onGui()
 			Gui.endCombo()
 		end
 
+		Gui.setItemTooltip("Compact mode hides some settings in the Home tab")
+
 		local tabTitleModeLabel = "Icon + name"
 		if tabTitleMode == "name" then
 			tabTitleModeLabel = "Name"
@@ -1744,6 +1778,8 @@ function onGui()
 			Gui.endCombo()
 		end
 
+		Gui.setItemTooltip("Changes how tab names are displayed")
+
 		Gui.newLine()
 
 		Gui.separatorText("Owner")
@@ -1760,6 +1796,8 @@ function onGui()
 			end
 		end
 
+		Gui.setItemTooltip("Instantly sets you as Owner + Following in Playercam. Also shows your name first in player lists.")
+
 		Gui.newLine()
 
 		Gui.separatorText("Ball")
@@ -1774,6 +1812,8 @@ function onGui()
 			end
 		end
 
+		Gui.setItemTooltip("Adjusts the size of the ball in replays")
+
 		local newPlaceBallEnabled = Gui.checkbox("'Place Ball' visuals", Inputs.placeBallEnabled)
 		if newPlaceBallEnabled ~= Inputs.placeBallEnabled then
 			Inputs.placeBallEnabled = newPlaceBallEnabled
@@ -1783,6 +1823,8 @@ function onGui()
 				saveConfig()
 			end
 		end
+
+		Gui.setItemTooltip("Enables or disables the Place Ball visuals in Driftball")
 
 		local newGoalExplosions = Gui.checkbox("Goal explosions", Inputs.playGoalExplosions)
 		if newGoalExplosions ~= Inputs.playGoalExplosions then
@@ -1794,6 +1836,8 @@ function onGui()
 			end
 		end
 
+		Gui.setItemTooltip("Enables or disables goal explosions in replays. Broken? I think")
+
 		local newZDriftBallOutlineEnabled = Gui.checkbox("Z-Drift ball outline", zDriftBallOutlineEnabled)
 		if newZDriftBallOutlineEnabled ~= zDriftBallOutlineEnabled then
 			zDriftBallOutlineEnabled = newZDriftBallOutlineEnabled
@@ -1802,6 +1846,8 @@ function onGui()
 				saveConfig()
 			end
 		end
+
+		Gui.setItemTooltip("Custom-drawn Z-Drift ball outline since spec still doesn't have it")
 
 		if zDriftBallOutlineEnabled then
 			Gui.sameLine()
@@ -1882,6 +1928,18 @@ function onGui()
 		Gui.newLine()
 
 		Gui.separatorText("Debug")
+		local newAutoFocusKeybindEnabled = Gui.checkbox("Auto-focus keybind", autoFocusKeybindEnabled)
+		if newAutoFocusKeybindEnabled ~= autoFocusKeybindEnabled then
+			autoFocusKeybindEnabled = newAutoFocusKeybindEnabled
+			config.autoFocusKeybindEnabled = autoFocusKeybindEnabled
+			Inputs.autoFocusKeyKB = autoFocusKeybindEnabled and Input.Key.MiddleMouseButton or nil
+			Inputs.autoFocusKeyGP = autoFocusKeybindEnabled and Input.Gamepad.RightThumbstick or nil
+			if saveConfig then
+				saveConfig()
+			end
+		end
+
+		Gui.setItemTooltip("If enabled, pressing Middle Mouse Button or Right Thumbstick auto-focuses (Depth of Field)")
 
 		local newCollisionEnabled = Gui.checkbox("Enable Collisions", collisionEnabled)
 		if newCollisionEnabled ~= collisionEnabled then
@@ -1891,6 +1949,20 @@ function onGui()
 				saveConfig()
 			end
 		end
+
+		Gui.setItemTooltip("Fun setting to mess around with collisions")
+
+		local newBarrelRollEnabled = Gui.checkbox("Arrow-key barrel rolls", barrelRollEnabled)
+		if newBarrelRollEnabled ~= barrelRollEnabled then
+			barrelRollEnabled = newBarrelRollEnabled
+			config.barrelRollEnabled = barrelRollEnabled
+			if saveConfig then
+				saveConfig()
+			end
+		end
+
+		Gui.setItemTooltip("If enabled, pressing Arrow Left or Arrow Right will do a barrel roll")
+
 		local newShowAxisDebug = Gui.checkbox("Show Playercam debug tab", config.showAxisDebug)
 		if newShowAxisDebug ~= config.showAxisDebug then
 			config.showAxisDebug = newShowAxisDebug
@@ -1898,6 +1970,8 @@ function onGui()
 				saveConfig()
 			end
 		end
+
+		Gui.setItemTooltip("Adds Debug tab in Playercam")
 
 		local newShowLocationWriter = Gui.checkbox("Show Location Writer##debugShowLocationWriter", showLocationWriter)
 		if newShowLocationWriter ~= showLocationWriter then
@@ -1908,6 +1982,8 @@ function onGui()
 			end
 		end
 
+		Gui.setItemTooltip("Debug tool for me to add locations")
+
 		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
 		if newScraprunSpinners ~= Inputs.playScraprunSpinners then
 			Inputs.playScraprunSpinners = newScraprunSpinners
@@ -1917,6 +1993,8 @@ function onGui()
 				saveConfig()
 			end
 		end
+
+		Gui.setItemTooltip("Scraprun spinners go brr")
 
 		Gui.endTabItem()
 	end
@@ -2190,17 +2268,20 @@ function tick(dt)
 	end
 
 	if pendingGravitySnap then
-		ntimer += dt
-		snapToGravity()
-		if ntimer >= ndelay then
-			snapToGravity()
+		gravitySnapTimer += dt
+		if gravitySnapTimer >= pendingGravitySnapDelay and not nameTagsSyncPending then
+			snapToGravity(pendingGravitySnapRotation)
 			pendingGravitySnap = false
-			ntimer = 0
+			pendingGravitySnapRotation = nil
+			gravitySnapTimer = 0
 		end
 	end
 
 	Models.tick(dt)
 	drawZDriftBallOutline()
+	if autoFocusKeybindEnabled and (Input.getKey(Inputs.autoFocusKeyKB) or Input.getKey(Inputs.autoFocusKeyGP)) then
+		Util.autoFocusCenter()
+	end
 	timer = timer + dt
 
 	local mapType = detectMapType()
@@ -2344,10 +2425,22 @@ function tick(dt)
 	if (Input.getKeyDown(Input.Key.Up) or Input.getKeyDown(Inputs.frontflipGp)) and not flipActive then
 		flipActive = true
 		flipDirection = 1
+		flipAxis = "pitch"
 		flipTimer = 0
 	elseif (Input.getKeyDown(Input.Key.Down) or Input.getKeyDown(Inputs.backflipGp)) and not flipActive then
 		flipActive = true
 		flipDirection = -1
+		flipAxis = "pitch"
+		flipTimer = 0
+	elseif barrelRollEnabled and Input.getKeyDown(Input.Key.Left) and not flipActive then
+		flipActive = true
+		flipDirection = -1
+		flipAxis = "roll"
+		flipTimer = 0
+	elseif barrelRollEnabled and Input.getKeyDown(Input.Key.Right) and not flipActive then
+		flipActive = true
+		flipDirection = 1
+		flipAxis = "roll"
 		flipTimer = 0
 	end
 
@@ -2502,7 +2595,12 @@ function tick(dt)
 	end
 	camera.position += movement
 	camera.rotation = gravityChaser
-		* Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y + currentFlipOffset, Inputs.rotEuler.z)
+		* Quat.fromEuler(
+			-- Don't question it. Putting it into brackets was the best weay to do it and if you complain with that you're getting BAANNED
+			Inputs.rotEuler.x + (flipAxis == "roll" and currentFlipOffset or 0),
+			Inputs.rotEuler.y + (flipAxis == "pitch" and currentFlipOffset or 0),
+			Inputs.rotEuler.z
+		)
 	local gameData = getGameData()
 	if gameData and gameData.spectators then
 		spectatorList = gameData.spectators
