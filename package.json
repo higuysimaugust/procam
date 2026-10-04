@@ -1,7 +1,7 @@
 {
     "name": "august.procam",
     "displayName": "procam",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "A giant script combining Freecam, Playercam (Gopro), adding 50+ new features, many bug fixes and improvements, + WAY more",
     "main": "main.luau",
     "keywords": [

@@ -138,6 +138,23 @@ local disconnectKeyStr = config.disconnectKeyStr or "R"
 local ownerName = config.ownerName or "Playername"
 config.ownerName = ownerName
 
+local maxMatchmakingServer = 20
+local matchmakingServerNumber = math.clamp(
+	type(config.MatchmakingServerNumber) == "number" and config.MatchmakingServerNumber
+		or tonumber(config.MatchmakingServerNumber or config.matchmakingServerNumber)
+		or 0,
+	0,
+	maxMatchmakingServer
+)
+local matchmakingStatusMessage = ""
+
+local function getMatchmakingStationName(serverNumber: number): string
+	if serverNumber == 0 then
+		return "Matchmaking"
+	end
+	return "Matchmaking_" .. tostring(serverNumber)
+end
+
 local emoteLabels = {
 	[0] = { "None" },
 	[1] = { "+" },
@@ -2000,6 +2017,28 @@ function onGui()
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Users, "Players")) then
+		if Gui.collapsingHeader("Join Matchmaking Server") then
+			Gui.textDisabled("Ranked servers aren't visible in the server browser, so you can join via this!")
+			matchmakingServerNumber = Gui.sliderInt("##servernum", matchmakingServerNumber, 0, maxMatchmakingServer)
+			if matchmakingServerNumber ~= config.MatchmakingServerNumber then
+				config.MatchmakingServerNumber = matchmakingServerNumber
+				if saveConfig then
+					saveConfig()
+				end
+			end
+			Gui.sameLine()
+			if Gui.button(Icon.SignInAlt .. "  Join " .. getMatchmakingStationName(matchmakingServerNumber)) then
+				local stationName = getMatchmakingStationName(matchmakingServerNumber)
+				local connected = Network.connectToServer(stationName)
+				matchmakingStatusMessage = connected and ("joining " .. stationName .. "...")
+					or ("could NOT join " .. stationName .. ".")
+			end
+			if matchmakingStatusMessage ~= "" then
+				Gui.sameLine()
+				Gui.text(matchmakingStatusMessage)
+			end
+		end
+
 		local players = {}
 		local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
 
