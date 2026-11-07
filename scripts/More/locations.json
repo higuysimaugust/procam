@@ -1,0 +1,640 @@
+{
+    "67": "Hi drifters! Sowry for locations being so cluttered, it's now all in a cool easy to use json yippee. Sorry for columns its the best i could think on how to do it. fieldOfView is optional, defaulted to 90. Maps are auto-picked from the gamemodes API detectMapType(). idea by Entity B the smartest drifter alive. enjoy owo",
+    "maps": {
+        "Orion": {
+            "locations": {
+                "Driftball District": {
+                    "position": [
+                        0,
+                        -3000,
+                        -27000
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        90
+                    ],
+                    "fieldOfView": 90
+                },
+                "Driftball Sparks Supplies": {
+                    "position": [
+                        -3616.6,
+                        2623.2,
+                        -28411.3
+                    ],
+                    "rotation": [
+                        0,
+                        -0.8,
+                        179.7
+                    ],
+                    "fieldOfView": 90
+                },
+                "Driftball Mainframe": {
+                    "position": [
+                        -786.7,
+                        2476.6,
+                        -29148.3
+                    ],
+                    "rotation": [
+                        0,
+                        -2.1,
+                        31.3
+                    ],
+                    "fieldOfView": 80
+                },
+                "Driftball Plaza West": {
+                    "position": [
+                        2752.6,
+                        18540,
+                        -29478.3
+                    ],
+                    "rotation": [
+                        0,
+                        -2,
+                        -0.7
+                    ],
+                    "fieldOfView": 80
+                },
+                "Driftball Plaza East": {
+                    "position": [
+                        -2629,
+                        18576.3,
+                        -29338.3
+                    ],
+                    "rotation": [
+                        0,
+                        -2.5,
+                        -179.5
+                    ],
+                    "fieldOfView": 80
+                },
+                "Driftball Prime": {
+                    "position": [
+                        5.7,
+                        25270,
+                        -27899.1
+                    ],
+                    "rotation": [
+                        0,
+                        -0.9,
+                        90.4
+                    ],
+                    "fieldOfView": 80
+                },
+                "Driftball 4v4 West": {
+                    "position": [
+                        -14160.8,
+                        27898.6,
+                        -23246.5
+                    ],
+                    "rotation": [
+                        28.5,
+                        -4.9,
+                        -89.6
+                    ],
+                    "fieldOfView": 90
+                },
+                "Driftball 4v4 East": {
+                    "position": [
+                        13688.8,
+                        28096.6,
+                        -23525.5
+                    ],
+                    "rotation": [
+                        -30.1,
+                        -4.9,
+                        -89.6
+                    ],
+                    "fieldOfView": 90
+                },
+                "Driftball Fieldhouse": {
+                    "position": [
+                        46.5,
+                        22785.3,
+                        -29127.5
+                    ],
+                    "rotation": [
+                        0,
+                        -5.6,
+                        91.1
+                    ],
+                    "fieldOfView": 90
+                },
+                "Club District": {
+                    "position": [
+                        24000,
+                        1000,
+                        14000
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        90
+                    ],
+                    "fieldOfView": 90
+                },
+                "Club Sparks Supplies": {
+                    "position": [
+                        22868.9,
+                        6266.6,
+                        17292.1
+                    ],
+                    "rotation": [
+                        179.3,
+                        60.1,
+                        179.2
+                    ],
+                    "fieldOfView": 90
+                },
+                "Club Mainframe": {
+                    "position": [
+                        25653.1,
+                        2461.7,
+                        13850.4
+                    ],
+                    "rotation": [
+                        137.6,
+                        49.9,
+                        129
+                    ],
+                    "fieldOfView": 75
+                },
+                "Club Volleyfall": {
+                    "position": [
+                        22496.1,
+                        12093.4,
+                        18064.3
+                    ],
+                    "rotation": [
+                        129.4,
+                        -37.8,
+                        63.2
+                    ],
+                    "fieldOfView": 75
+                },
+                "Z-Drift Plaza": {
+                    "position": [
+                        6448.4,
+                        6560.7,
+                        3734.8
+                    ],
+                    "rotation": [
+                        -120.3,
+                        0.5,
+                        -89.4
+                    ],
+                    "fieldOfView": 90
+                },
+                "Z-Drift Alpha": {
+                    "position": [
+                        8734.7,
+                        -5412.5,
+                        -2669.4
+                    ],
+                    "rotation": [
+                        -60.2,
+                        0.7,
+                        -90.5
+                    ],
+                    "fieldOfView": 90
+                },
+                "Z-Drift Beta": {
+                    "position": [
+                        7571.8,
+                        -5406.4,
+                        4377.9
+                    ],
+                    "rotation": [
+                        -120.3,
+                        -0.6,
+                        -90.2
+                    ],
+                    "fieldOfView": 90
+                },
+                "Z-Drift Gamma": {
+                    "position": [
+                        2049,
+                        -5450.9,
+                        8889.3
+                    ],
+                    "rotation": [
+                        179.7,
+                        -1.6,
+                        -90.4
+                    ],
+                    "fieldOfView": 90
+                },
+                "Cargo Bay": {
+                    "position": [
+                        133.7,
+                        8087.4,
+                        -7414.6
+                    ],
+                    "rotation": [
+                        0.5,
+                        -2.5,
+                        -90.2
+                    ],
+                    "fieldOfView": 90
+                },
+                "Z-Drift DRAFT District": {
+                    "position": [
+                        -6797.9,
+                        8024.8,
+                        4058.9
+                    ],
+                    "rotation": [
+                        120,
+                        -2,
+                        -89.5
+                    ],
+                    "fieldOfView": 90
+                },
+                "Parkour District": {
+                    "position": [
+                        -24150,
+                        1457,
+                        14100
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        90
+                    ],
+                    "fieldOfView": 90
+                },
+                "Scraprun": {
+                    "position": [
+                        -16857.9,
+                        7397.9,
+                        29016.7
+                    ],
+                    "rotation": [
+                        -150,
+                        1.4,
+                        91.2
+                    ],
+                    "fieldOfView": 90
+                },
+                "DRAFT District": {
+                    "position": [
+                        186.2,
+                        1769.9,
+                        28125.7
+                    ],
+                    "rotation": [
+                        -179.3,
+                        1.4,
+                        91.2
+                    ],
+                    "fieldOfView": 90
+                },
+                "DRAFT Underground": {
+                    "position": [
+                        83.3,
+                        3755.6,
+                        29812.3
+                    ],
+                    "rotation": [
+                        180,
+                        3,
+                        91.3
+                    ],
+                    "fieldOfView": 75
+                },
+                "The Spine": {
+                    "position": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Driftblitz": {
+                    "position": [
+                        27009.3,
+                        5353.3,
+                        -211
+                    ],
+                    "rotation": [
+                        90,
+                        -0.4,
+                        85.5
+                    ],
+                    "fieldOfView": 90
+                },
+                "Club Baseball": {
+                    "position": [
+                        13899.7,
+                        1254.5,
+                        24347.8
+                    ],
+                    "rotation": [
+                        149.9,
+                        -0.4,
+                        85.5
+                    ],
+                    "fieldOfView": 90
+                },
+                "Club Fieldhouse": {
+                    "position": [
+                        23232.2,
+                        28749.7,
+                        16914.5
+                    ],
+                    "rotation": [
+                        -179.5,
+                        -53.9,
+                        -0.5
+                    ],
+                    "fieldOfView": 90
+                },
+                "Space": {
+                    "position": [
+                        -373165.7,
+                        -3660.2,
+                        -314114.9
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "fieldOfView": 90
+                }
+            },
+            "columns": [
+                [
+                    {
+                        "title": "Driftball District",
+                        "labels": [
+                            "Driftball District",
+                            "Driftball Sparks Supplies",
+                            "Driftball Mainframe",
+                            "Driftball Plaza West",
+                            "Driftball Plaza East",
+                            "Driftball Prime",
+                            "Driftball 4v4 West",
+                            "Driftball 4v4 East",
+                            "Driftball Fieldhouse"
+                        ]
+                    },
+                    {
+                        "title": "Parkour District",
+                        "labels": [
+                            "Parkour District",
+                            "Scraprun",
+                            "DRAFT District",
+                            "DRAFT Underground"
+                        ]
+                    },
+                    {
+                        "title": "Orion",
+                        "labels": [
+                            "Space"
+                        ]
+                    }
+                ],
+                [
+                    {
+                        "title": "Club District",
+                        "labels": [
+                            "Club District",
+                            "Club Sparks Supplies",
+                            "Club Mainframe",
+                            "Club Volleyfall",
+                            "Club Fieldhouse",
+                            "Club Baseball",
+                            "Driftblitz"
+                        ]
+                    },
+                    {
+                        "title": "Z-Drift",
+                        "labels": [
+                            "Z-Drift Plaza",
+                            "Cargo Bay",
+                            "Z-Drift Alpha",
+                            "Z-Drift Beta",
+                            "Z-Drift Gamma",
+                            "Z-Drift DRAFT District"
+                        ]
+                    }
+                ]
+            ]
+        },
+        "Ares": {
+            "locations": {
+                "Ares Plaza": {
+                    "position": [
+                        2215.4,
+                        -5997.9,
+                        132.4
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        -180
+                    ],
+                    "fieldOfView": 90
+                },
+                "Alpha 03": {
+                    "position": [
+                        -14.8,
+                        -17975,
+                        -8070
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "fieldOfView": 90
+                },
+                "Alpha 02": {
+                    "position": [
+                        -17.2,
+                        -5940.6,
+                        -7962.8
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "fieldOfView": 90
+                },
+                "Alpha 01": {
+                    "position": [
+                        -19.6,
+                        5977,
+                        -8087.2
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        -1
+                    ],
+                    "fieldOfView": 90
+                },
+                "Beta 03": {
+                    "position": [
+                        6993.7,
+                        -18012.6,
+                        4014.6
+                    ],
+                    "rotation": [
+                        1,
+                        -1,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Beta 02": {
+                    "position": [
+                        7000.7,
+                        -5987.9,
+                        4049
+                    ],
+                    "rotation": [
+                        1,
+                        -1,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Beta 01": {
+                    "position": [
+                        6964.6,
+                        6062.1,
+                        4028.4
+                    ],
+                    "rotation": [
+                        1,
+                        -1,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Gamma 03": {
+                    "position": [
+                        -6992.7,
+                        -17947,
+                        4031.9
+                    ],
+                    "rotation": [
+                        -1,
+                        1,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Gamma 02": {
+                    "position": [
+                        -7001.6,
+                        -5993,
+                        4024.1
+                    ],
+                    "rotation": [
+                        -1,
+                        1,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Gamma 01": {
+                    "position": [
+                        -6985,
+                        5999.7,
+                        4031.8
+                    ],
+                    "rotation": [
+                        -1,
+                        1,
+                        0
+                    ],
+                    "fieldOfView": 90
+                },
+                "Space": {
+                    "position": [
+                        150800.7,
+                        94700.2,
+                        -62450.9
+                    ],
+                    "rotation": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "fieldOfView": 90
+                }
+            },
+            "columns": [
+                [
+                    {
+                        "title": "Ares",
+                        "labels": [
+                            "Ares Plaza",
+                            "Space"
+                        ]
+                    },
+                    {
+                        "title": "Alpha",
+                        "labels": [
+                            "Alpha 01",
+                            "Alpha 02",
+                            "Alpha 03"
+                        ]
+                    },
+                    {
+                        "title": "Beta",
+                        "labels": [
+                            "Beta 01",
+                            "Beta 02",
+                            "Beta 03"
+                        ]
+                    },
+                    {
+                        "title": "Gamma",
+                        "labels": [
+                            "Gamma 01",
+                            "Gamma 02",
+                            "Gamma 03"
+                        ]
+                    }
+                ]
+            ]
+        },
+        "Shuttle": {
+            "locations": {
+                "Shuttle": {
+                    "position": [
+                        1325,
+                        15,
+                        84
+                    ],
+                    "rotation": [
+                        0,
+                        -5,
+                        -53
+                    ],
+                    "fieldOfView": 90
+                }
+            },
+            "columns": [
+                [
+                    {
+                        "title": "Shuttle",
+                        "labels": [
+                            "Shuttle"
+                        ]
+                    }
+                ]
+            ]
+        }
+    }
+}
