@@ -138,22 +138,32 @@ local disconnectKeyStr = config.disconnectKeyStr or "R"
 local ownerName = config.ownerName or "Playername"
 config.ownerName = ownerName
 
-local maxMatchmakingServer = 20
-local matchmakingServerNumber = math.clamp(
-	type(config.MatchmakingServerNumber) == "number" and config.MatchmakingServerNumber
-		or tonumber(config.MatchmakingServerNumber or config.matchmakingServerNumber)
+local joinServerFleets = {
+	{ name = "Matchmaking", fleet = "Matchmaking" },
+	{ name = "Rookies", fleet = "EA Calibration" },
+	{ name = "Core", fleet = "Core" },
+	{ name = "Ares", fleet = "ARES SHIP 4v4" },
+	{ name = "Clubhouse", fleet = "Clubhouse" },
+	{ name = "Creator Events", fleet = "Creator Events" },
+	{ name = "Events", fleet = "Events" },
+	{ name = "Freerunners", fleet = "Freerunners" },
+	{ name = "Ghostship", fleet = "Ghostship" },
+	{ name = "ODC", fleet = "ODC_Matches" },
+	{ name = "Passers", fleet = "Passers Club" },
+	{ name = "Sports", fleet = "Sports" },
+	{ name = "Tournament", fleet = "Tournament Fleet" },
+}
+local maxJoinServerNumber = 20
+local joinServerFleetName = config.joinServerFleet or joinServerFleets[1].name
+local joinServerNumber = math.clamp(
+	type(config.joinServerNumber) == "number" and config.joinServerNumber
+		or tonumber(config.joinServerNumber or config.MatchmakingServerNumber or config.matchmakingServerNumber)
 		or 0,
 	0,
-	maxMatchmakingServer
+	maxJoinServerNumber
 )
-local matchmakingStatusMessage = ""
-
-local function getMatchmakingStationName(serverNumber: number): string
-	if serverNumber == 0 then
-		return "Matchmaking"
-	end
-	return "Matchmaking_" .. tostring(serverNumber)
-end
+local showServerJoiner = config.showServerJoiner ~= false
+local joinServerStatusMessage = ""
 
 local emoteLabels = {
 	[0] = { "None" },
@@ -198,273 +208,60 @@ type CameraTransform = {
 	rotation: Quat,
 	fieldOfView: number,
 }
-local startLocations: { [string]: { [string]: CameraTransform } } = {
-	Orion = {
-		-- Oh yeah 99 things now start with either Driftball or Club, so they fit better and work properly. I could've done this with ## but it also makes better organization and for GUIs sake yk
-		["Driftball District"] = {
-			position = Vec3.new(0, -3000, -27000),
-			rotation = Quat.fromEuler(0, 0, 90),
-			fieldOfView = 90,
-		},
-		["Driftball Sparks Supplies"] = {
-			position = Vec3.new(-3616.6, 2623.2, -28411.3),
-			rotation = Quat.fromEuler(0.0, -0.8, 179.7),
-			fieldOfView = 90.0,
-		},
-		["Driftball Mainframe"] = {
-			position = Vec3.new(-786.7, 2476.6, -29148.3),
-			rotation = Quat.fromEuler(0.0, -2.1, 31.3),
-			fieldOfView = 80.0,
-		},
-		["Driftball Plaza West"] = {
-			position = Vec3.new(2752.6, 18540.0, -29478.3),
-			rotation = Quat.fromEuler(-0.0, -2.0, -0.7),
-			fieldOfView = 80.0,
-		},
-		["Driftball Plaza East"] = {
-			position = Vec3.new(-2629.0, 18576.3, -29338.3),
-			rotation = Quat.fromEuler(-0.0, -2.5, -179.5),
-			fieldOfView = 80.0,
-		},
-		["Driftball Prime"] = {
-			position = Vec3.new(5.7, 25270.0, -27899.1),
-			rotation = Quat.fromEuler(0.0, -0.9, 90.4),
-			fieldOfView = 80.0,
-		},
-		["Driftball 4v4 West"] = {
-			position = Vec3.new(-14160.8, 27898.6, -23246.5),
-			rotation = Quat.fromEuler(28.5, -4.9, -89.6),
-			fieldOfView = 90.0,
-		},
-		["Driftball 4v4 East"] = {
-			position = Vec3.new(13688.8, 28096.6, -23525.5),
-			rotation = Quat.fromEuler(-30.1, -4.9, -89.6),
-			fieldOfView = 90.0,
-		},
-		["Driftball Fieldhouse"] = {
-			position = Vec3.new(46.5, 22785.3, -29127.5),
-			rotation = Quat.fromEuler(0.0, -5.6, 91.1),
-			fieldOfView = 90.0,
-		},
-		["Club District"] = {
-			position = Vec3.new(24000, 1000, 14000),
-			rotation = Quat.fromEuler(0, 0, 90),
-			fieldOfView = 90,
-		},
-		["Club Sparks Supplies"] = {
-			position = Vec3.new(22868.9, 6266.6, 17292.1),
-			rotation = Quat.fromEuler(179.3, 60.1, 179.2),
-			fieldOfView = 90.0,
-		},
-		["Club Mainframe"] = {
-			position = Vec3.new(25653.1, 2461.7, 13850.4),
-			rotation = Quat.fromEuler(137.6, 49.9, 129.0),
-			fieldOfView = 75.0,
-		},
-		["Club Volleyfall"] = {
-			position = Vec3.new(22496.1, 12093.4, 18064.3),
-			rotation = Quat.fromEuler(129.4, -37.8, 63.2),
-			fieldOfView = 75.0,
-		},
-		["Z-Drift Plaza"] = {
-			position = Vec3.new(6448.4, 6560.7, 3734.8),
-			rotation = Quat.fromEuler(-120.3, 0.5, -89.4),
-			fieldOfView = 90.0,
-		},
-		["Z-Drift Alpha"] = {
-			position = Vec3.new(8734.7, -5412.5, -2669.4),
-			rotation = Quat.fromEuler(-60.2, 0.7, -90.5),
-			fieldOfView = 90.0,
-		},
-		["Z-Drift Beta"] = {
-			position = Vec3.new(7571.8, -5406.4, 4377.9),
-			rotation = Quat.fromEuler(-120.3, -0.6, -90.2),
-			fieldOfView = 90.0,
-		},
-		["Z-Drift Gamma"] = {
-			position = Vec3.new(2049.0, -5450.9, 8889.3),
-			rotation = Quat.fromEuler(179.7, -1.6, -90.4),
-			fieldOfView = 90.0,
-		},
-		["Cargo Bay"] = {
-			position = Vec3.new(133.7, 8087.4, -7414.6),
-			rotation = Quat.fromEuler(0.5, -2.5, -90.2),
-			fieldOfView = 90.0,
-		},
-		["Z-Drift DRAFT District"] = {
-			position = Vec3.new(-6797.9, 8024.8, 4058.9),
-			rotation = Quat.fromEuler(120.0, -2.0, -89.5),
-			fieldOfView = 90.0,
-		},
-		["Parkour District"] = {
-			position = Vec3.new(-24150, 1457, 14100),
-			rotation = Quat.fromEuler(0, 0, 90),
-			fieldOfView = 90,
-		},
-		["Scraprun"] = {
-			position = Vec3.new(-16857.9, 7397.9, 29016.7),
-			rotation = Quat.fromEuler(-150.0, 1.4, 91.2),
-			fieldOfView = 90.0,
-		},
-		["DRAFT District"] = {
-			position = Vec3.new(186.2, 1769.9, 28125.7),
-			rotation = Quat.fromEuler(-179.3, 1.4, 91.2),
-			fieldOfView = 90.0,
-		},
-		["DRAFT Underground"] = {
-			position = Vec3.new(83.3, 3755.6, 29812.3),
-			rotation = Quat.fromEuler(180.0, 3.0, 91.3),
-			fieldOfView = 75.0,
-		},
-		["The Spine"] = {
-			position = Vec3.new(-0.0, -0.0, 0.0),
-			rotation = Quat.fromEuler(0.0, -0.0, 0.0),
-			fieldOfView = 90.0,
-		},
-		["Driftblitz"] = {
-			position = Vec3.new(27009.3, 5353.3, -211.0),
-			rotation = Quat.fromEuler(90.0, -0.4, 85.5),
-			fieldOfView = 90.0,
-		},
-		["Club Baseball"] = {
-			position = Vec3.new(13899.7, 1254.5, 24347.8),
-			rotation = Quat.fromEuler(149.9, -0.4, 85.5),
-			fieldOfView = 90.0,
-		},
-		["Club Fieldhouse"] = {
-			position = Vec3.new(23232.2, 28749.7, 16914.5),
-			rotation = Quat.fromEuler(-179.5, -53.9, -0.5),
-			fieldOfView = 90.0,
-		},
-		["Space"] = {
-			position = Vec3.new(-373165.7, -3660.2, -314114.9),
-			rotation = Quat.fromEuler(-0.0, -0.0, 0.0),
-			fieldOfView = 90.0,
-		},
-	},
-	Ares = {
-		["Ares Plaza"] = {
-			position = Vec3.new(2215.4, -5997.9, 132.4),
-			rotation = Quat.fromEuler(0, 0, -180),
-			fieldOfView = 90,
-		},
-		["Alpha 03"] = {
-			position = Vec3.new(-14.8, -17975.0, -8070.0),
-			rotation = Quat.fromEuler(0, 0, -1),
-			fieldOfView = 90,
-		},
-		["Alpha 02"] = {
-			position = Vec3.new(-17.2, -5940.6, -7962.8),
-			rotation = Quat.fromEuler(0, 0, -1),
-			fieldOfView = 90,
-		},
-		["Alpha 01"] = {
-			position = Vec3.new(-19.6, 5977.0, -8087.2),
-			rotation = Quat.fromEuler(0, 0, -1),
-			fieldOfView = 90,
-		},
-		["Beta 03"] = {
-			position = Vec3.new(6993.7, -18012.6, 4014.6),
-			rotation = Quat.fromEuler(1, -1, -0),
-			fieldOfView = 90,
-		},
-		["Beta 02"] = {
-			position = Vec3.new(7000.7, -5987.9, 4049.0),
-			rotation = Quat.fromEuler(1, -1, -0),
-			fieldOfView = 90,
-		},
-		["Beta 01"] = {
-			position = Vec3.new(6964.6, 6062.1, 4028.4),
-			rotation = Quat.fromEuler(1, -1, -0),
-			fieldOfView = 90,
-		},
-		["Gamma 03"] = {
-			position = Vec3.new(-6992.7, -17947.0, 4031.9),
-			rotation = Quat.fromEuler(-1, 1, -0),
-			fieldOfView = 90,
-		},
-		["Gamma 02"] = {
-			position = Vec3.new(-7001.6, -5993.0, 4024.1),
-			rotation = Quat.fromEuler(-1, 1, -0),
-			fieldOfView = 90,
-		},
-		["Gamma 01"] = {
-			position = Vec3.new(-6985.0, 5999.7, 4031.8),
-			rotation = Quat.fromEuler(-1, 1, -0),
-			fieldOfView = 90,
-		},
-		["Space"] = {
-			position = Vec3.new(150800.7, 94700.2, -62450.9),
-			rotation = Quat.fromEuler(-0.0, -0.0, 0.0),
-			fieldOfView = 90.0,
-		},
-	},
-	Shuttle = {
-		["Shuttle"] = { position = Vec3.new(1325, 15, 84), rotation = Quat.fromEuler(0, -5, -53), fieldOfView = 90 },
-	},
-}
-local orionLocationGroups = {
-	{
-		title = "Driftball District",
-		labels = {
-			"Driftball District",
-			"Driftball Sparks Supplies",
-			"Driftball Mainframe",
-			"Driftball Plaza West",
-			"Driftball Plaza East",
-			"Driftball Prime",
-			"Driftball 4v4 West",
-			"Driftball 4v4 East",
-		},
-	},
 
-	{
-		title = "Parkour District",
-		labels = { "Parkour District", "Scraprun", "DRAFT District", "DRAFT Underground" },
-	},
-	{
-		title = "Orion",
-		labels = { "Space" },
-	},
-}
+-- locations have been MOVED to this json. more info on that is inside the comment in the json
+local locationJsonText = LuauFile.loadText("scripts/More/locations.json")
+local decodedLocationData = nil
+if locationJsonText ~= "" then
+	local ok, result = pcall(LuauJson.parse, locationJsonText)
+	if ok then
+		decodedLocationData = result
+	else
+		print("Procam: could not parse scripts/More/locations.json: " .. tostring(result))
+	end
+end
 
-local orionLocationGroups2 = {
-	{
-		title = "Club District",
-		labels = {
-			"Club District",
-			"Club Sparks Supplies",
-			"Club Mainframe",
-			"Club Volleyfall",
-			"Club Fieldhouse",
-			"Club Baseball",
-			"Club Driftblitz",
-		},
-	},
-	{
-		title = "Z-Drift",
-		labels = { "Z-Drift Plaza", "Cargo Bay", "Z-Drift Alpha", "Z-Drift Beta", "Z-Drift Gamma", "Z-Drift DRAFT District" },
-	},
-}
+local locationMaps = {}
+if type(decodedLocationData) == "table" and type(decodedLocationData.maps) == "table" then
+	locationMaps = decodedLocationData.maps
+else
+	print("Procam: locations.json must contain a top-level 'maps' object")
+end
 
-local aresLocationGroups = {
-	{
-		title = "Ares",
-		labels = { "Ares Plaza", "Space" },
-	},
-	{
-		title = "Alpha",
-		labels = { "Alpha 01", "Alpha 02", "Alpha 03" },
-	},
-	{
-		title = "Beta",
-		labels = { "Beta 01", "Beta 02", "Beta 03" },
-	},
-	{
-		title = "Gamma",
-		labels = { "Gamma 01", "Gamma 02", "Gamma 03" },
-	},
-}
+local startLocations: { [string]: { [string]: CameraTransform } } = {}
+for mapType, mapData in pairs(locationMaps) do
+	if type(mapType) == "string" and type(mapData) == "table" and type(mapData.locations) == "table" then
+		local mapLocations: { [string]: CameraTransform } = {}
+		for locationName, locationData in pairs(mapData.locations) do
+			if type(locationName) == "string" and type(locationData) == "table" then
+				local position = locationData.position
+				local rotation = locationData.rotation
+				local fieldOfView = tonumber(locationData.fieldOfView)
+				if type(position) == "table" and type(rotation) == "table"
+					and tonumber(position[1]) and tonumber(position[2]) and tonumber(position[3])
+					and tonumber(rotation[1]) and tonumber(rotation[2]) and tonumber(rotation[3])
+					and fieldOfView then
+					mapLocations[locationName] = {
+						position = Vec3.new(tonumber(position[1]), tonumber(position[2]), tonumber(position[3])),
+						rotation = Quat.fromEuler(tonumber(rotation[1]), tonumber(rotation[2]), tonumber(rotation[3])),
+						fieldOfView = fieldOfView,
+					}
+				else
+					print("Procam: skipping invalid location '" .. locationName .. "' in " .. mapType)
+				end
+			end
+		end
+		startLocations[mapType] = mapLocations
+	end
+end
+
+local function getLocationColumns(mapType: string)
+	local mapData = locationMaps[mapType]
+	if type(mapData) == "table" and type(mapData.columns) == "table" then
+		return mapData.columns
+	end
+	return {}
+end
 
 local function detectMapType()
 	-- thanks to witherr for letting me steal its code on this: basically, how do we detect what map (orion/shuttle/ares) we're on? gamemodes api! no one knwos about it but itsg enuineyl such a cool workarouind
@@ -490,48 +287,42 @@ end
 
 local function drawLocationCombo(comboId, selectedMapType, selectedName)
 	if Gui.beginCombo(comboId, selectedName) then
-		local function drawMapType(MapTypeName, groups)
-			if Gui.collapsingHeader(MapTypeName .. "##" .. comboId .. "_" .. MapTypeName) then
+		local function drawMapType(mapType)
+			if Gui.collapsingHeader(mapType .. "##" .. comboId .. "_" .. mapType) then
 				local firstGroup = true
-				for _, group in ipairs(groups) do
-					if not firstGroup then
-						Gui.separator()
-					end
-					firstGroup = false
+				for columnIndex, groups in ipairs(getLocationColumns(mapType)) do
+					if type(groups) == "table" then
+						for _, group in ipairs(groups) do
+							if not firstGroup then
+								Gui.separator()
+							end
+							firstGroup = false
 
-					for _, locationName in ipairs(group.labels) do
-						local locationItemId = comboId .. "_" .. MapTypeName .. "_" .. locationName
-						if
-							startLocations[MapTypeName][locationName]
-							and Gui.selectable(
-								locationName .. "##" .. locationItemId,
-								selectedMapType == MapTypeName and selectedName == locationName
-							)
-						then
-							selectedMapType = MapTypeName
-							selectedName = locationName
+							if type(group) == "table" and type(group.labels) == "table" then
+								for _, locationName in ipairs(group.labels) do
+									local locationItemId = comboId .. "_" .. mapType .. "_" .. columnIndex .. "_" .. locationName
+									if
+									startLocations[mapType]
+										and startLocations[mapType][locationName]
+										and Gui.selectable(
+											locationName .. "##" .. locationItemId,
+											selectedMapType == mapType and selectedName == locationName
+										)
+									then
+										selectedMapType = mapType
+										selectedName = locationName
+									end
+								end
+							end
 						end
 					end
 				end
 			end
 		end
 
-		drawMapType("Orion", orionLocationGroups)
-		drawMapType("Orion", orionLocationGroups2)
-		drawMapType("Ares", aresLocationGroups)
-		if Gui.collapsingHeader("Shuttle##" .. comboId .. "_Shuttle") then
-			if
-				startLocations.Shuttle
-				and startLocations.Shuttle.Shuttle
-				and Gui.selectable(
-					"Shuttle##" .. comboId .. "_ShuttleChoice",
-					selectedMapType == "Shuttle" and selectedName == "Shuttle"
-				)
-			then
-				selectedMapType = "Shuttle"
-				selectedName = "Shuttle"
-			end
-		end
+		drawMapType("Orion")
+		drawMapType("Ares")
+		drawMapType("Shuttle")
 
 		Gui.endCombo()
 	end
@@ -542,7 +333,18 @@ local defaultSpawnMapType = config.defaultSpawnMapType or "Orion"
 local defaultSpawnName = config.defaultSpawnName or "Driftball District"
 local startLocation = startLocations[defaultSpawnMapType] and startLocations[defaultSpawnMapType][defaultSpawnName]
 if not startLocation then
-	startLocation = startLocations.Orion["Driftball District"]
+	startLocation = startLocations.Orion and startLocations.Orion["Driftball District"]
+end
+if not startLocation then
+	for _, mapLocations in pairs(startLocations) do
+		for _, location in pairs(mapLocations) do
+			startLocation = location
+			break
+		end
+		if startLocation then
+			break
+		end
+	end
 end
 
 local pendingGravitySnap = false
@@ -551,6 +353,8 @@ local pendingGravitySnapRotation: Quat? = nil
 local defaultSpawnSearchText = ""
 local playerSearchText = ""
 local selectedPlayerTarget = nil
+local playerMuteStates: { [string]: boolean } = {}
+local muteActionFailedFor: string? = nil
 local followSpectatorEnabled = false
 local selectedSpectatorName = ""
 local spectatorSearchText = ""
@@ -880,7 +684,11 @@ end
 function onTransitionBegin(transitionInfo: Transition)
 	if Inputs.firstTransition then
 		transitionInfo.length = 10
-		goToLocation(startLocation, defaultSpawnGravitySnapDelay)
+		if startLocation then
+			goToLocation(startLocation, defaultSpawnGravitySnapDelay)
+		else
+			print("Procam: no valid camera locations were loaded from scripts/More/locations.json")
+		end
 	else
 		goToLocation({
 			position = transitionInfo.startPosition,
@@ -961,15 +769,28 @@ function onGui()
 	if Gui.beginTabItem(getTabTitle(Icon.Home, "Home")) then
 		Gui.separatorText("Quick Settings")
 
-		local newShowNameTags = Gui.checkbox("Show name tags", config.showNameTags)
-		if newShowNameTags ~= config.showNameTags then
+		local showNameTags = config.showNameTags
+		if Axis.isEnabled then
+			showNameTags = config.nameTagType ~= 2
+		end
+		local newShowNameTags = Gui.checkbox("Show name tags", showNameTags)
+		if newShowNameTags ~= showNameTags then
 			config.showNameTags = newShowNameTags
+			if Axis.isEnabled then
+				config.nameTagType = newShowNameTags and 0 or 2
+			end
 			camera.showNameTags = config.showNameTags
 			if saveConfig then
 				saveConfig()
 			end
 		end
+		if Axis.isEnabled then
+			Gui.beginDisabled()
+		end
 		local newAlignToGravity = Gui.checkbox("Automatically Align to Gravity", Inputs.alignToGravity)
+		if Axis.isEnabled then
+			Gui.endDisabled()
+		end
 		if newAlignToGravity ~= Inputs.alignToGravity then
 			Inputs.alignToGravity = newAlignToGravity
 			config.alignToGravity = newAlignToGravity
@@ -985,9 +806,21 @@ function onGui()
 			end
 			Gui.textDisabled(zeroGHint)
 		end
+		if Axis.isEnabled then
+			Gui.beginDisabled()
+		end
 		local newSmoothing = Gui.checkbox("Enable Smoothing##smoothingCheckbox", Inputs.smoothing)
+		if Axis.isEnabled then
+			Gui.endDisabled()
+		end
 		if homePageStyle == "Default" then
+			if Axis.isEnabled then
+				Gui.beginDisabled()
+			end
 			local newLocalMovementAxes = Gui.checkbox("Use Local Movement Axes", Inputs.localMovementAxesDefault)
+			if Axis.isEnabled then
+				Gui.endDisabled()
+			end
 			if newLocalMovementAxes ~= Inputs.localMovementAxesDefault then
 				Inputs.localMovementAxesDefault = newLocalMovementAxes
 				config.localMovementAxesDefault = newLocalMovementAxes
@@ -1047,6 +880,9 @@ function onGui()
 
 		if homePageStyle == "Default" then
 			Gui.separatorText("Movement")
+			if Axis.isEnabled then
+				Gui.beginDisabled()
+			end
 
 		local newMoveSpeed = Gui.sliderFloat("Move Speed", moveSpeed, Inputs.minMoveSpeed, Inputs.maxMoveSpeed)
 		if newMoveSpeed ~= moveSpeed then
@@ -1096,6 +932,9 @@ function onGui()
 				saveConfig()
 			end
 		end
+			if Axis.isEnabled then
+				Gui.endDisabled()
+			end
 
 			Gui.separatorText("Camera Controls")
 
@@ -1108,7 +947,21 @@ function onGui()
 			Inputs.rotEuler = newRot
 			camera.rotation = Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y, Inputs.rotEuler.z)
 		end
-			camera.fieldOfView = Gui.sliderFloat("Field of View", camera.fieldOfView, Inputs.minFov, Inputs.maxFov)
+			local displayedFov = Axis.isEnabled and config.fov or camera.fieldOfView
+			local minFov = Axis.isEnabled and 80 or Inputs.minFov
+			local maxFov = Axis.isEnabled and 130 or Inputs.maxFov
+			local newFieldOfView = Gui.sliderFloat("Field of View", displayedFov, minFov, maxFov)
+			if newFieldOfView ~= displayedFov then
+				if Axis.isEnabled then
+					config.fov = newFieldOfView
+					camera.fieldOfView = newFieldOfView
+					if saveConfig then
+						saveConfig()
+					end
+				else
+					camera.fieldOfView = newFieldOfView
+				end
+			end
 		end
 
 		Gui.newLine()
@@ -1249,8 +1102,7 @@ function onGui()
 
 				if Gui.beginTabItem("Orion") then
 					local firstGroup = true
-					local combinedOrion = { orionLocationGroups, orionLocationGroups2 }
-					for _, groups in ipairs(combinedOrion) do
+					for _, groups in ipairs(getLocationColumns("Orion")) do
 						for _, group in ipairs(groups) do
 							if not firstGroup then
 								Gui.separator()
@@ -1259,7 +1111,8 @@ function onGui()
 
 							for _, locName in ipairs(group.labels) do
 								if
-									startLocations.Orion[locName]
+									startLocations.Orion
+									and startLocations.Orion[locName]
 									and (search == "" or string.find(string.lower(locName), search, 1, true))
 								then
 									if Gui.selectable(locName, defaultSpawnName == locName) then
@@ -1281,24 +1134,27 @@ function onGui()
 				if Gui.beginTabItem("Ares") then
 					local firstGroup = true
 
-					for _, group in ipairs(aresLocationGroups) do
-						if not firstGroup then
-							Gui.separator()
-						end
-						firstGroup = false
+					for _, groups in ipairs(getLocationColumns("Ares")) do
+						for _, group in ipairs(groups) do
+							if not firstGroup then
+								Gui.separator()
+							end
+							firstGroup = false
 
-						for _, locName in ipairs(group.labels) do
-							if
-								startLocations.Ares[locName]
-								and (search == "" or string.find(string.lower(locName), search, 1, true))
-							then
-								if Gui.selectable(locName, defaultSpawnName == locName) then
-									defaultSpawnMapType = "Ares"
-									defaultSpawnName = locName
-									config.defaultSpawnMapType = defaultSpawnMapType
-									config.defaultSpawnName = defaultSpawnName
-									if saveConfig then
-										saveConfig()
+							for _, locName in ipairs(group.labels) do
+								if
+									startLocations.Ares
+									and startLocations.Ares[locName]
+									and (search == "" or string.find(string.lower(locName), search, 1, true))
+								then
+									if Gui.selectable(locName, defaultSpawnName == locName) then
+										defaultSpawnMapType = "Ares"
+										defaultSpawnName = locName
+										config.defaultSpawnMapType = defaultSpawnMapType
+										config.defaultSpawnName = defaultSpawnName
+										if saveConfig then
+											saveConfig()
+										end
 									end
 								end
 							end
@@ -1334,53 +1190,27 @@ function onGui()
 			Gui.sameLine()
 			Gui.text("Default Spawn")
 
-			if currentMapType == "Ares" then
-				Gui.beginChild("ares_column_single", 605, 300, true)
-				for idx, group in ipairs(aresLocationGroups) do
-					if idx > 1 then
+			local locationMapType = startLocations[currentMapType] and currentMapType or "Orion"
+			local locationColumns = getLocationColumns(locationMapType)
+			Gui.beginHorizontal("location_columns")
+			for columnIndex, groups in ipairs(locationColumns) do
+				local columnWidth = #locationColumns == 1 and 605 or 300
+				local columnHeight = locationMapType == "Ares" and 300 or 350
+				Gui.beginChild("location_column_" .. locationMapType .. "_" .. tostring(columnIndex), columnWidth, columnHeight, true)
+				for groupIndex, group in ipairs(groups) do
+					if groupIndex > 1 then
 						Gui.separator()
 					end
 					for _, label in ipairs(group.labels) do
-						local location = startLocations.Ares[label]
+						local location = startLocations[locationMapType] and startLocations[locationMapType][label]
 						if location and Gui.selectable(label, false) then
 							goToLocation(location)
 						end
 					end
 				end
 				Gui.endChild()
-			else
-				Gui.beginHorizontal("location_columns")
-
-				Gui.beginChild("orion_column_left", 300, 350, true)
-				for idx, group in ipairs(orionLocationGroups) do
-					if idx > 1 then
-						Gui.separator()
-					end
-					for _, label in ipairs(group.labels) do
-						local location = startLocations.Orion[label]
-						if location and Gui.selectable(label, false) then
-							goToLocation(location)
-						end
-					end
-				end
-				Gui.endChild()
-
-				Gui.beginChild("orion_column_right", 300, 350, true)
-				for idx, group in ipairs(orionLocationGroups2) do
-					if idx > 1 then
-						Gui.separator()
-					end
-					for _, label in ipairs(group.labels) do
-						local location = startLocations.Orion[label]
-						if location and Gui.selectable(label, false) then
-							goToLocation(location)
-						end
-					end
-				end
-				Gui.endChild()
-
-				Gui.endHorizontal()
 			end
+			Gui.endHorizontal()
 		end
 
 		if showLocationWriter then
@@ -1411,7 +1241,6 @@ function onGui()
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Cog, "Settings")) then
-		Gui.textDisabled("Hover over each setting for descriptions!")
 		if Gui.collapsingHeader("Controls") then
 			if Gui.beginTable("ControlsTable", 3) then
 				Gui.tableSetupColumn("Action", 0, 0.4)
@@ -2001,6 +1830,15 @@ function onGui()
 
 		Gui.setItemTooltip("Debug tool for me to add locations")
 
+		local newShowServerJoiner = Gui.checkbox("Show Server Joiner", showServerJoiner)
+		if newShowServerJoiner ~= showServerJoiner then
+			showServerJoiner = newShowServerJoiner
+			config.showServerJoiner = showServerJoiner
+			if saveConfig then
+				saveConfig()
+			end
+		end
+
 		local newScraprunSpinners = Gui.checkbox("Scraprun spinners", Inputs.playScraprunSpinners)
 		if newScraprunSpinners ~= Inputs.playScraprunSpinners then
 			Inputs.playScraprunSpinners = newScraprunSpinners
@@ -2017,28 +1855,6 @@ function onGui()
 	end
 
 	if Gui.beginTabItem(getTabTitle(Icon.Users, "Players")) then
-		if Gui.collapsingHeader("Join Matchmaking Server") then
-			Gui.textDisabled("Ranked servers aren't visible in the server browser, so you can join via this!")
-			matchmakingServerNumber = Gui.sliderInt("##servernum", matchmakingServerNumber, 0, maxMatchmakingServer)
-			if matchmakingServerNumber ~= config.MatchmakingServerNumber then
-				config.MatchmakingServerNumber = matchmakingServerNumber
-				if saveConfig then
-					saveConfig()
-				end
-			end
-			Gui.sameLine()
-			if Gui.button(Icon.SignInAlt .. "  Join " .. getMatchmakingStationName(matchmakingServerNumber)) then
-				local stationName = getMatchmakingStationName(matchmakingServerNumber)
-				local connected = Network.connectToServer(stationName)
-				matchmakingStatusMessage = connected and ("joining " .. stationName .. "...")
-					or ("could NOT join " .. stationName .. ".")
-			end
-			if matchmakingStatusMessage ~= "" then
-				Gui.sameLine()
-				Gui.text(matchmakingStatusMessage)
-			end
-		end
-
 		local players = {}
 		local sessions = getAllGameData and getAllGameData() or (getGameData and { getGameData() } or {})
 
@@ -2177,6 +1993,23 @@ function onGui()
 					Axis.onLoad()
 				end
 			end
+
+			Gui.sameLine()
+			local isPlayerMuted = playerMuteStates[selectedPlayerObj.playerName] == true
+			local muteButtonLabel = isPlayerMuted and (Icon.VolumeMute .. "  Unmute") or (Icon.VolumeUp .. "  Mute")
+			if Gui.button(muteButtonLabel) then
+				local shouldMute = not isPlayerMuted
+				if Settings.mutePlayerByName(selectedPlayerObj.playerName, shouldMute) then
+					playerMuteStates[selectedPlayerObj.playerName] = shouldMute
+					muteActionFailedFor = nil
+				else
+					muteActionFailedFor = selectedPlayerObj.playerName
+				end
+			end
+			if muteActionFailedFor == selectedPlayerObj.playerName then
+				Gui.sameLine()
+				Gui.textDisabled("Player not found")
+			end
 		else
 			Gui.textDisabled("Select a player above to interact.")
 		end
@@ -2223,6 +2056,81 @@ function onGui()
 		end
 		Gui.unindent()
 		Gui.newLine()
+
+		if showServerJoiner and Gui.collapsingHeader("Join Server") then
+			local joinServerFleetRows = {
+				{ "Rookies", "Core", "Clubhouse", "Freerunners" },
+				{ "Matchmaking", "Ares", "ODC", "Passers" },
+				{ "Creator Events", "Events", "Ghostship", "Sports" },
+			}
+			for rowIndex, fleetRow in ipairs(joinServerFleetRows) do
+				for columnIndex, fleetName in ipairs(fleetRow) do
+					local fleetOption = nil
+					for _, option in ipairs(joinServerFleets) do
+						if option.name == fleetName then
+							fleetOption = option
+							break
+						end
+					end
+
+					if fleetOption then
+						if columnIndex > 1 then
+							Gui.sameLine()
+						end
+						Gui.pushId("join_fleet_" .. fleetName)
+						local isSelectedFleet = joinServerFleetName == fleetName
+						local clicked = false
+						if isSelectedFleet then
+							Gui.beginDisabled()
+							clicked = Gui.button(fleetName)
+							Gui.endDisabled()
+						else
+							clicked = Gui.button(fleetName)
+						end
+						if clicked and not isSelectedFleet then
+							joinServerFleetName = fleetName
+							config.joinServerFleet = joinServerFleetName
+							if saveConfig then
+								saveConfig()
+							end
+						end
+						Gui.popId()
+					end
+				end
+			end
+
+			Gui.newLine()
+			local selectedJoinFleet = joinServerFleets[1]
+			for _, fleetOption in ipairs(joinServerFleets) do
+				if fleetOption.name == joinServerFleetName then
+					selectedJoinFleet = fleetOption
+					break
+				end
+			end
+
+			local newJoinServerNumber = Gui.sliderInt("Server Number", joinServerNumber, 0, maxJoinServerNumber)
+			if newJoinServerNumber ~= joinServerNumber then
+				joinServerNumber = newJoinServerNumber
+				config.joinServerNumber = joinServerNumber
+				if saveConfig then
+					saveConfig()
+				end
+			end
+
+			local stationName = selectedJoinFleet.fleet
+			if joinServerNumber > 0 then
+				stationName ..= "_" .. tostring(joinServerNumber)
+			end
+			if Gui.button(Icon.SignInAlt .. "  Join " .. stationName) then
+				local connected = Network.connectToServer(stationName)
+				joinServerStatusMessage = connected and ("Joining...")
+					or ("No such server")
+			end
+			if joinServerStatusMessage ~= "" then
+				Gui.sameLine()
+				Gui.text(joinServerStatusMessage)
+			end
+		end
 
 		Gui.endTabItem()
 	end
@@ -2296,6 +2204,9 @@ function tick(dt)
 		and Input.getKeyDown(parseKeyStr(showNameTagsKeyStr))
 	then
 		config.showNameTags = not config.showNameTags
+		if Axis.isEnabled then
+			config.nameTagType = config.showNameTags and 0 or 2
+		end
 		camera.showNameTags = config.showNameTags
 		if saveConfig then
 			saveConfig()
