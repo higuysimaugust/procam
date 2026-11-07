@@ -22,6 +22,9 @@ type ReplayState = {
 }
 
 local replayNoCheckedWarningTimer = 0
+local isRecording = false
+local recordingStatus = ""
+local replayFilesBeforeRecording = {}
 
 local replayStates: { [string]: ReplayState } = {}
 
@@ -71,6 +74,15 @@ local function applyToSelected(loaded, callback)
 	if not hadSelected then
 		replayNoCheckedWarningTimer = 2.0
 	end
+end
+
+local function getNewReplayName(filesBeforeRecording): string?
+	for _, fileName in ipairs(Replay.listAll()) do
+		if not filesBeforeRecording[fileName] then
+			return fileName:match("([^/\\]+)%.a2replay$") or fileName:gsub("%.a2replay$", "")
+		end
+	end
+	return nil
 end
 
 function Replays.tick(dt)
@@ -126,6 +138,46 @@ function Replays.onGui()
 	local loaded = getLoadedReplays()
 
 	Gui.textDisabled("Load replays in, then check the replays you need")
+	Gui.separatorText("Recording")
+	if Settings.getLuauReplayControlAllowed() then
+		if isRecording then
+			if Gui.button(Icon.Stop .. "  Stop Recording") then
+				if Replay.stopRecording() then
+					isRecording = false
+					local replayName = getNewReplayName(replayFilesBeforeRecording)
+					if replayName then
+						recordingStatus = "Replay saved: " .. replayName
+					else
+						recordingStatus = "Replay saved!"
+					end
+					replayFilesBeforeRecording = {}
+				else
+					recordingStatus = "Couldn't save recording, what the flip?"
+				end
+			end
+		else
+			if Gui.button(Icon.Circle .. "  Start Recording") then
+				local filesBeforeRecording = {}
+				for _, fileName in ipairs(Replay.listAll()) do
+					filesBeforeRecording[fileName] = true
+				end
+				if Replay.startRecording() then
+					isRecording = true
+					recordingStatus = "Recording..."
+					replayFilesBeforeRecording = filesBeforeRecording
+				else
+					recordingStatus = "Couldn't save recording, what the flip?"
+				end
+			end
+		end
+	else
+		Gui.textDisabled("To record replays, enable \"Allow camera scripts to start/stop replay file recording\" in Settings.")
+	end
+	if recordingStatus ~= "" then
+		Gui.sameLine()
+		Gui.textDisabled(recordingStatus)
+	end
+
 	Gui.separatorText("Keybinds")
 
 	Inputs.drawConfigKeybind({

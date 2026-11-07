@@ -757,9 +757,10 @@ local function updateManualOrbitMode(player, dt)
 	if not player or not player.head then
 		return
 	end
-
-	local distanceChangeInput = Input.getAnalog(Input.Key.MouseWheelAxis) * -config.orbitMouseWheelSensitivity
-	config.orbitRadius = math.max(10, config.orbitRadius + distanceChangeInput)
+	if Input.getKey(Input.Key.LeftControl) then
+		local distanceChangeInput = Input.getAnalog(Input.Key.MouseWheelAxis) * -config.orbitMouseWheelSensitivity
+		config.orbitRadius = math.max(10, config.orbitRadius + distanceChangeInput)
+	end
 
 	local mouse = Input.getMouseDelta()
 	local adjustedMouseSensitivity = 2 * (camera.fieldOfView - 90) / 90 + config.orbitMouseSensitivity
@@ -2115,14 +2116,17 @@ local function drawSettingsTab()
 
 	Gui.separatorText("Quick Settings")
 
-	local newShowNameTags = Gui.checkbox("Show name tags", config.nameTagType ~= 2)
-	if newShowNameTags ~= (config.nameTagType ~= 2) then
+	local showNameTags = config.nameTagType ~= 2
+	local newShowNameTags = Gui.checkbox("Show name tags", showNameTags)
+	if newShowNameTags ~= showNameTags then
 		config.nameTagType = newShowNameTags and 0 or 2
+		config.showNameTags = newShowNameTags
 		updateNameTagsVisibility()
 		changed = true
 	end
 
 	local newFov = Gui.sliderFloat("Field of View", config.fov, 80, 130)
+	Gui.setItemTooltip("Use the scroll wheel to adjust FOV.")
 	if newFov ~= config.fov then
 		config.fov = newFov
 		changed = true
@@ -2355,6 +2359,7 @@ local function drawSettingsTab()
 
 	local newOrbitMouseWheelSensitivity =
 		Gui.sliderFloat("Scroll Sensitivity", config.orbitMouseWheelSensitivity, 10, 150)
+	Gui.setItemTooltip("Hold Left Control while scrolling to adjust orbit radius.")
 	if newOrbitMouseWheelSensitivity ~= config.orbitMouseWheelSensitivity then
 		config.orbitMouseWheelSensitivity = newOrbitMouseWheelSensitivity
 		changed = true
@@ -2506,6 +2511,9 @@ local function drawDebugTab()
 end
 
 function Axis.onLoad()
+	if config.showNameTags ~= nil then
+		config.nameTagType = config.showNameTags and 0 or 2
+	end
 	if camera then
 		camera.fieldOfView = config.fov
 		camera.nearClippingPlane = config.nearClip
@@ -2585,16 +2593,26 @@ end
 function Axis.tick(dt)
 	t = t + dt
 
-	if config.followBestScraprunPlayer then
-		updateScraprunFollow(dt)
-		return
-	end
-
 	if configDirty and t >= configSaveAtTime then
 		if saveConfig then
 			saveConfig()
 		end
 		configDirty = false
+	end
+
+	local fovWheelInput = Input.getAnalog(Input.Key.MouseWheelAxis)
+	local adjustingOrbitRadius = manualOrbitMode and Input.getKey(Input.Key.LeftControl)
+	if fovWheelInput ~= 0 and not adjustingOrbitRadius then
+		config.fov = math.clamp(config.fov - fovWheelInput * 5, 80, 130)
+		if camera then
+			camera.fieldOfView = config.fov
+		end
+		queueConfigSave()
+	end
+
+	if config.followBestScraprunPlayer then
+		updateScraprunFollow(dt)
+		return
 	end
 
 	if camera and not thirdPersonMode then
