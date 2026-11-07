@@ -60,6 +60,8 @@ type Light = {
 	lightType: string,
 	isPlayerLight: boolean?,
 	trackedPlayerId: number?,
+	positionOffset: Vec3?,
+	presetType: string?,
 	name: string,
 }
 
@@ -77,6 +79,7 @@ local status = " "
 local lightTabOpen = false
 local lightIndex = 1
 local lightPlayerSearchText = ""
+local selectedPlayerLightId: number? = nil
 
 local pendingSpawnModelFile: string? = nil
 local pendingSpawnModelDelay: number = 0
@@ -604,23 +607,32 @@ local function spawnLight(lightType: string)
 	end
 end
 
-local function spawnPlayerLight(playerId: number)
+local playerLightPresetOffsets = {
+	Key = Vec3.new(46, 48, 0),
+	Back = Vec3.new(-130, -50, -50),
+	Side = Vec3.new(150, 100, 0),
+}
+
+local function spawnPlayerLight(playerId: number, presetType: string?, positionOffset: Vec3?)
 	lightSpawnCount += 1
-	local light = WorldDraw.spawnPointLight(inFrontOfCamera(), 10000, Vec3.new(1, 1, 1), 1000)
+	local light = WorldDraw.spawnPointLight(inFrontOfCamera(), 200, Vec3.new(1, 1, 1), 1000)
 	if light then
+		local lightType = if presetType then "Player " .. presetType else "Player"
 		table.insert(lights, {
 			position = light.position,
 			intensity = light.intensity,
 			color = Vec3.new(1, 1, 1),
 			radius = light.radius,
-			lightType = "Player",
+			lightType = lightType,
 			isPlayerLight = true,
 			trackedPlayerId = playerId,
-			name = "Player Light #" .. lightSpawnCount,
+			positionOffset = positionOffset or Vec3.zeroVector,
+			presetType = presetType,
+			name = lightType .. " Light #" .. lightSpawnCount,
 			__internalLight = light,
 		})
 		lightIndex = #lights
-		status = "Spawned Player Light"
+		status = "Spawned " .. lightType .. " Light"
 	else
 		status = "Failed to spawn light"
 	end
@@ -634,9 +646,13 @@ local function updateLightObjects()
 				local targetPlayer = Util.findPlayerById(entry.trackedPlayerId)
 
 				if targetPlayer and targetPlayer.root and targetPlayer.root.position then
-					local playerPos = targetPlayer.root.position
-					local camPos = camera.position
-					entry.position = playerPos + (camPos - playerPos) * 0.3
+					local basePosition = targetPlayer.root.position
+					if entry.presetType == "Key" and targetPlayer.head and targetPlayer.head.position then
+						basePosition = targetPlayer.head.position
+					end
+					local rootRotation = targetPlayer.root.rotation or Quat.identity
+					local localOffset = entry.positionOffset or Vec3.zeroVector
+					entry.position = basePosition + rootRotation:rotateVector(localOffset)
 				end
 			end
 
@@ -663,6 +679,16 @@ local function getPlayersList()
 	for _, player in ipairs(Util.getPlayers()) do
 		table.insert(players, { id = player.id, name = player.name })
 	end
+
+	local ownerName = string.lower(config.ownerName or "")
+	table.sort(players, function(firstPlayer, secondPlayer)
+		local firstIsOwner = (config.ownerId ~= nil and firstPlayer.id == config.ownerId)
+			or (ownerName ~= "" and string.lower(firstPlayer.name) == ownerName)
+		local secondIsOwner = (config.ownerId ~= nil and secondPlayer.id == config.ownerId)
+			or (ownerName ~= "" and string.lower(secondPlayer.name) == ownerName)
+		return firstIsOwner and not secondIsOwner
+	end)
+
 	return players
 end
 
@@ -695,13 +721,48 @@ local function onLightsGui()
 		if Gui.beginListBox("##PlayerListForLight") then
 			for _, p in ipairs(players) do
 				if searchText == "" or string.find(string.lower(p.name), searchText, 1, true) then
-					if Gui.selectable(p.name, false) then
-						spawnPlayerLight(p.id)
+					Gui.pushId("player_light_" .. tostring(p.id))
+					if Gui.selectable(p.name, selectedPlayerLightId == p.id) then
+						selectedPlayerLightId = p.id
 					end
+					Gui.popId()
 				end
 			end
 		end
 		Gui.endListBox()
+	end
+
+	local selectedPlayer = nil
+	for _, player in ipairs(players) do
+		if player.id == selectedPlayerLightId then
+			selectedPlayer = player
+			break
+		end
+	end
+	if not selectedPlayer then
+		selectedPlayerLightId = nil
+	end
+
+	if not selectedPlayer then
+		Gui.beginDisabled()
+	end
+	if Gui.buttonColored(LinearColor.new(1, 1, 1, 0.1), Icon.Plus .. "  Custom") and selectedPlayer then
+		spawnPlayerLight(selectedPlayer.id)
+	end
+	Gui.sameLine()
+	if Gui.buttonColored(LinearColor.new(1, 1, 1, 0.1), Icon.Plus .. "  Key") and selectedPlayer then
+		spawnPlayerLight(selectedPlayer.id, "Key", playerLightPresetOffsets.Key)
+	end
+	Gui.sameLine()
+	if Gui.buttonColored(LinearColor.new(1, 1, 1, 0.1), Icon.Plus .. "  Back") and selectedPlayer then
+		spawnPlayerLight(selectedPlayer.id, "Back", playerLightPresetOffsets.Back)
+	end
+	Gui.sameLine()
+	if Gui.buttonColored(LinearColor.new(1, 1, 1, 0.1), Icon.Plus .. "  Side") and selectedPlayer then
+		spawnPlayerLight(selectedPlayer.id, "Side", playerLightPresetOffsets.Side)
+	end
+	if not selectedPlayer then
+		Gui.endDisabled()
 	end
 
 	Gui.separatorText("Lights (" .. #lights .. ")")
@@ -743,6 +804,13 @@ local function onLightsGui()
 			else
 				Gui.textDisabled("Player not found")
 			end
+			light.positionOffset = Gui.dragFloat3(
+				"Offset from Player",
+				light.positionOffset or Vec3.zeroVector,
+				1,
+				-1000,
+				1000
+			)
 		end
 
 		Gui.separatorText("Properties")
@@ -768,6 +836,8 @@ local function onLightsGui()
 					lightType = light.lightType,
 					isPlayerLight = light.isPlayerLight,
 					trackedPlayerId = light.trackedPlayerId,
+					positionOffset = light.positionOffset or Vec3.zeroVector,
+					presetType = light.presetType,
 					name = light.name .. " (copy)",
 					__internalLight = newLight,
 				})
