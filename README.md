@@ -37,8 +37,8 @@ __Rework of Pub's DriftVision with new features!__
   - Built from the ground-up, uses very complicated smoothing math 
 ### Replays
   - Manage several replays at once
-  - Load, set times, unload, play, restart easily
-  - Customizable keybinds if you're pro
+  - Load, set times, unload, play, restart, and record easily!
+  - Customizable keybinds if you're super cool
 ### Draw
 __Upload files to august.procam/assets__
 __Don't delete /assets/font!__
@@ -54,16 +54,17 @@ __Visit august-image.vercel.app/ to make GIFs__
 ### Draw (Lights)
   - Create, manage, and track lights
   - Player-tracked lights to improve streams and recordings
+  - Key (body), back, and side pro lights!
 ### Draw (Text)
   - 3D & 2D text
   - Super fast performance
   - Rainbow color
 
 ## Legal
-> [!WARNING]
-> Uses anotheraxiom.freecam as a base, pub's driftvision for the handcam tab, and anotheraxiom.modelviewer for the draw tab's base logic.
+Uses anotheraxiom.freecam as a base, Pub's driftvision for the handcam tab, and anotheraxiom.modelviewer for the draw tab's base logic.
 
-> [!IMPORTANT]
-> This product is not affiliated with Another Axiom Inc. or its videogames Gorilla Tag and Orion Drift and is not endorsed or otherwise sponsored by Another Axiom. Portions of the materials contained herein are property of Another Axiom. ©2021 Another Axiom Inc.
+This product is not affiliated with Another Axiom Inc. or its videogames Gorilla Tag and Orion Drift and is not endorsed or otherwise sponsored by Another Axiom. Portions of the materials contained herein are property of Another Axiom.
 
-Ping me in the forum thread for questions, feedback, suggestions, and more!
+© 2026 Another Axiom Inc.
+
+Ping me in the Procam forum thread for questions, feedback, suggestions, and more!
