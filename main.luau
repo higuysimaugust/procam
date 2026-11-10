@@ -38,6 +38,12 @@ if collisionEnabled == nil then
 	collisionEnabled = false
 end
 local collisionRadius = 100
+local ballFollowDistance = config.ballFollowDistance or 300
+local ballFollowCooldownDuration = config.ballFollowCooldown or 0.75
+local ballFollowCooldownTimer = 0
+local ballFollowMode = false
+local ballFollowActionWasHovered = false
+local ballFollowLastPosition: Vec3? = nil
 local gravityChaser = gravity.upRotation
 local gravityTarget = gravity.upRotation
 local gravityRegionPosition = Vec3.new(-240.0, -5710.0, 0.0)
@@ -486,6 +492,37 @@ local function getNearestZDriftBalls(position: Vec3, maxBalls: number)
 	return nearestBalls
 end
 
+local function getNearestBall(position: Vec3)
+	local frame = getGameData and getGameData()
+	local balls = frame and frame.balls
+	local nearestBall = nil
+	local nearestIndex = 0
+	local nearestDistance = math.huge
+	if not balls then
+		return nearestBall, nearestIndex, nearestDistance
+	end
+
+	for index, ball in ipairs(balls) do
+		if ball and ball.transform and ball.transform.position then
+			local distance = Vec3.distance(position, ball.transform.position)
+			if distance < nearestDistance then
+				nearestBall = ball
+				nearestIndex = index
+				nearestDistance = distance
+			end
+		end
+	end
+
+	return nearestBall, nearestIndex, nearestDistance
+end
+
+local function stopFollowingBall()
+	ballFollowMode = false
+	ballFollowLastPosition = nil
+	Inputs.lookInputTarget = Vec3.zeroVector
+	Inputs.rotEuler = (gravityChaser:inverse() * camera.rotation):euler()
+end
+
 local zDriftBallMeshCache = {}
 
 local function normalizeZDriftBallPoint(point: Vec3): Vec3
@@ -716,6 +753,8 @@ function onGui()
 		activeCam = "Path"
 	elseif Axis.isEnabled then
 		activeCam = "Playercam"
+	elseif ballFollowMode then
+		activeCam = "Ball"
 	end
 	if followSpectatorEnabled then
 		activeCam = "Spec Follow"
@@ -763,6 +802,45 @@ function onGui()
 		Gui.textDisabled(tostring(serverSpectatorCount))
 		Gui.endChild()
 	end
+
+	local ballFollowActionHovered = false
+	local nearestBall, _, nearestBallDistance = getNearestBall(camera.position)
+	if ballFollowMode or (nearestBall and nearestBallDistance <= ballFollowDistance) then
+		Gui.sameLine()
+		Gui.beginChild("GuiStatusBallFollow", 140, 42, true)
+		if ballFollowMode then
+			Gui.text(Icon.Circle)
+			Gui.sameLine()
+			Gui.textDisabled("Stop Follow")
+			ballFollowActionHovered = Gui.isItemHovered()
+			if ballFollowActionHovered and not ballFollowActionWasHovered and ballFollowCooldownTimer <= 0 then
+				stopFollowingBall()
+				ballFollowCooldownTimer = ballFollowCooldownDuration
+			end
+		elseif nearestBall then
+			local cannotFollowBall = Axis.isEnabled or Path.isPlaybackActive()
+			if cannotFollowBall then
+				Gui.beginDisabled()
+			end
+			Gui.text(Icon.CircleNotch)
+			Gui.sameLine()
+			Gui.textDisabled("Follow Ball")
+			ballFollowActionHovered = Gui.isItemHovered()
+			if ballFollowActionHovered and not ballFollowActionWasHovered and ballFollowCooldownTimer <= 0 and not cannotFollowBall then
+				ballFollowMode = true
+				ballFollowLastPosition = nearestBall.transform.position
+				followSpectatorEnabled = false
+				ballFollowCooldownTimer = ballFollowCooldownDuration
+			end
+			if cannotFollowBall then
+				Gui.endDisabled()
+			end
+		end
+		Gui.endChild()
+	end
+	ballFollowActionWasHovered = ballFollowActionHovered
+
+	
 
 	Gui.beginTabBar("FreecamTabs")
 
@@ -1648,6 +1726,26 @@ function onGui()
 
 		Gui.separatorText("Ball")
 
+		local newBallFollowDistance = Gui.sliderFloat("Ball follow distance", ballFollowDistance, 50, 2000)
+		if newBallFollowDistance ~= ballFollowDistance then
+			ballFollowDistance = newBallFollowDistance
+			config.ballFollowDistance = ballFollowDistance
+			if saveConfig then
+				saveConfig()
+			end
+		end
+		Gui.setItemTooltip("How close the camera must be to a ball before Follow Ball appears")
+
+		local newBallFollowCooldown = Gui.sliderFloat("Ball follow cooldown", ballFollowCooldownDuration, 0.1, 3.0)
+		if newBallFollowCooldown ~= ballFollowCooldownDuration then
+			ballFollowCooldownDuration = newBallFollowCooldown
+			config.ballFollowCooldown = ballFollowCooldownDuration
+			if saveConfig then
+				saveConfig()
+			end
+		end
+		Gui.setItemTooltip("Time to wait after toggling Ball mode before it can be toggled again")
+
 		local newBallScaleMultiplier = Gui.sliderFloat("Ball scale multiplier", Inputs.ballScaleMultiplier, 0, 10)
 		if newBallScaleMultiplier ~= Inputs.ballScaleMultiplier then
 			Inputs.ballScaleMultiplier = newBallScaleMultiplier
@@ -2176,18 +2274,63 @@ function onGui()
 end
 
 function tick(dt)
+	ballFollowCooldownTimer = math.max(0, ballFollowCooldownTimer - dt)
 	Path.tick(dt)
 	if Path.isPlaybackActive() then
 		-- path has priority boii
+		ballFollowMode = false
+		ballFollowLastPosition = nil
 		return
 	end
 
 	if Path.consumeCameraOverride() then
+		ballFollowMode = false
+		ballFollowLastPosition = nil
 		local pathRotation = Quat.fromEuler(Inputs.rotEuler.x, Inputs.rotEuler.y, Inputs.rotEuler.z)
 		gravityChaser = camera.rotation * pathRotation:inverse()
 		gravityTarget = gravityChaser
 		Inputs.lookInputTarget = Vec3.zeroVector
 		return
+	end
+
+	if enablePlayercamKey then
+		local keyEnum = parseKeyStr(PlayercamKeyStr)
+		if keyEnum and Input.getKeyDown(keyEnum) and not Axis.isEnabled then
+			Axis.isEnabled = true
+			Axis.onLoad()
+		end
+	end
+
+	if Input.getKeyDown(Inputs.toggleCameraGp) then
+		if Axis.isEnabled then
+			Axis.isEnabled = false
+			Axis.onUnload()
+			Util.clearAxisSmoothing(Inputs)
+		else
+			Axis.isEnabled = true
+			Axis.onLoad()
+		end
+	end
+
+	if Axis.isEnabled and ballFollowMode then
+		ballFollowMode = false
+		ballFollowLastPosition = nil
+	end
+
+	if ballFollowMode then
+		local ball = getNearestBall(ballFollowLastPosition or camera.position)
+		if not ball or not ball.transform or not ball.transform.position then
+			stopFollowingBall()
+		else
+			camera.position = ball.transform.position
+			if ball.transform.rotation then
+				camera.rotation = ball.transform.rotation
+			end
+			ballFollowLastPosition = ball.transform.position
+			Inputs.rotEuler = (gravityChaser:inverse() * camera.rotation):euler()
+			Inputs.lookInputTarget = Vec3.zeroVector
+			return
+		end
 	end
 
 	if nameTagsSyncPending then
@@ -2275,27 +2418,6 @@ function tick(dt)
 				Axis.onUnload()
 				Util.clearAxisSmoothing(Inputs)
 			end
-		end
-	end
-
-	if enablePlayercamKey then
-		local keyEnum = parseKeyStr(PlayercamKeyStr)
-		if keyEnum and Input.getKeyDown(keyEnum) then
-			if not Axis.isEnabled then
-				Axis.isEnabled = true
-				Axis.onLoad()
-			end
-		end
-	end
-
-	if Input.getKeyDown(Inputs.toggleCameraGp) then
-		if Axis.isEnabled then
-			Axis.isEnabled = false
-			Axis.onUnload()
-			Util.clearAxisSmoothing(Inputs)
-		else
-			Axis.isEnabled = true
-			Axis.onLoad()
 		end
 	end
 
